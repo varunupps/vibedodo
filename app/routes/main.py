@@ -13,9 +13,15 @@ main = Blueprint('main', __name__)
 @main.route('/')
 def index():
     if not current_user.is_authenticated:
-        # Get a few recent public images to show on the homepage
-        public_uploads = Upload.query.filter_by(is_public=True).order_by(Upload.date_posted.desc()).limit(6).all()
-        return render_template('index.html', public_uploads=public_uploads)
+        # Check if the database has been migrated with the share fields
+        try:
+            # Get a few recent public images to show on the homepage
+            public_uploads = Upload.query.filter_by(is_public=True).order_by(Upload.date_posted.desc()).limit(6).all()
+            return render_template('index.html', public_uploads=public_uploads)
+        except Exception as e:
+            # If there's an error (like missing columns), return an empty list
+            print(f"Error loading public uploads: {str(e)}")
+            return render_template('index.html', public_uploads=[])
     return render_template('index.html')
 
 def save_picture(form_picture):
