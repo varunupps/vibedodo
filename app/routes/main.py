@@ -13,7 +13,9 @@ main = Blueprint('main', __name__)
 @main.route('/')
 def index():
     if not current_user.is_authenticated:
-        return redirect(url_for('auth.login'))
+        # Get a few recent public images to show on the homepage
+        public_uploads = Upload.query.filter_by(is_public=True).order_by(Upload.date_posted.desc()).limit(6).all()
+        return render_template('index.html', public_uploads=public_uploads)
     return render_template('index.html')
 
 def save_picture(form_picture):
@@ -132,3 +134,29 @@ def delete_upload(upload_id):
     if current_user.is_admin and request.referrer and 'admin' in request.referrer:
         return redirect(url_for('admin.admin_uploads'))
     return redirect(url_for('main.dashboard'))
+
+@main.route('/share-upload/<int:upload_id>', methods=['POST'])
+@login_required
+def share_upload(upload_id):
+    upload = Upload.query.get_or_404(upload_id)
+    
+    # Check if the current user is the owner of the upload
+    if upload.user_id != current_user.id and not current_user.is_admin:
+        abort(403)
+    
+    # Generate a share token if it doesn't exist
+    if not upload.share_token:
+        upload.generate_share_token()
+        db.session.commit()
+        flash('Your image is now shared! Anyone with the link can view it.', 'success')
+    
+    # Get the share URL
+    share_url = url_for('main.view_shared', token=upload.share_token, _external=True)
+    
+    return render_template('share.html', upload=upload, share_url=share_url)
+
+@main.route('/shared/<string:token>')
+def view_shared(token):
+    upload = Upload.query.filter_by(share_token=token, is_public=True).first_or_404()
+    
+    return render_template('shared_image.html', upload=upload)

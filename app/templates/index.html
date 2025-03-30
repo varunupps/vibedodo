@@ -3,13 +3,40 @@
 {% block title %}Home{% endblock %}
 
 {% block content %}
-<div style="text-align: center; margin-top: 50px;">
-    <h1>Welcome to VibeDodo</h1>
-    <p>A simple Flask web application.</p>
-    {% if current_user.is_authenticated %}
-        <a href="{{ url_for('main.dashboard') }}" class="btn">Go to Dashboard</a>
-    {% else %}
-        <a href="{{ url_for('auth.register') }}" class="btn">Get Started</a>
+<div class="container mt-5">
+    <div class="text-center mb-5">
+        <h1>Welcome to VibeDodo</h1>
+        <p class="lead">Upload, share, and order printed postcards of your favorite images.</p>
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary btn-lg">Go to Dashboard</a>
+        {% else %}
+            <div class="mb-4">
+                <a href="{{ url_for('auth.register') }}" class="btn btn-success btn-lg me-2">Sign Up</a>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary btn-lg">Login</a>
+            </div>
+        {% endif %}
+    </div>
+    
+    {% if not current_user.is_authenticated and public_uploads %}
+        <h2 class="mb-4">Recently Shared Images</h2>
+        <div class="row">
+            {% for upload in public_uploads %}
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <img src="{{ url_for('static', filename='uploads/' + upload.image_filename) }}" class="card-img-top" alt="{{ upload.caption }}">
+                        <div class="card-body">
+                            <p class="card-text">{{ upload.caption }}</p>
+                            <a href="{{ url_for('main.view_shared', token=upload.share_token) }}" class="btn btn-sm btn-outline-primary">View Full Size</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <div class="text-center mt-4">
+            <p class="lead">Create an account to upload and share your own images!</p>
+            <a href="{{ url_for('auth.register') }}" class="btn btn-success">Sign Up Now</a>
+        </div>
     {% endif %}
 </div>
 {% endblock %}
