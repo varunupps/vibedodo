@@ -1,0 +1,211 @@
+{% extends "layout.html" %}
+
+{% block title %}Edit Image{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-10 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3>Add Text to Image</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <div class="position-relative">
+                                <!-- The canvas for editing -->
+                                <canvas id="imageCanvas" class="img-fluid border rounded"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h4>Text Editor</h4>
+                            <form method="POST" action="" id="textForm">
+                                {{ form.hidden_tag() }}
+                                
+                                <div class="form-group mb-3">
+                                    {{ form.text.label(class="form-label") }}
+                                    {{ form.text(class="form-control", rows=3, id="textInput") }}
+                                    {% if form.text.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.text.errors %}
+                                                <span>{{ error }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <small class="text-muted">Enter the text to display on your postcard</small>
+                                </div>
+                                
+                                {{ form.x_position(id="xPosition") }}
+                                {{ form.y_position(id="yPosition") }}
+                                
+                                <div class="form-group mb-3">
+                                    {{ form.font_size.label(class="form-label") }}
+                                    {{ form.font_size(class="form-control", id="fontSize", min="8", max="72") }}
+                                    {% if form.font_size.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.font_size.errors %}
+                                                <span>{{ error }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="form-group mb-3">
+                                    {{ form.color.label(class="form-label") }}
+                                    {{ form.color(class="form-control", id="colorPicker", type="color") }}
+                                    {% if form.color.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form.color.errors %}
+                                                <span>{{ error }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="alert alert-info">
+                                    <p class="mb-0"><strong>Instructions:</strong></p>
+                                    <ol class="mb-0">
+                                        <li>Enter your text in the box above</li>
+                                        <li>Click and drag to position the text on the image</li>
+                                        <li>Adjust the font size and color as needed</li>
+                                        <li>Click "Save Postcard" when finished</li>
+                                    </ol>
+                                </div>
+                                
+                                <div class="form-group mt-3">
+                                    {{ form.submit(class="btn btn-primary") }}
+                                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Cancel</a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get the canvas and form elements
+        const canvas = document.getElementById('imageCanvas');
+        const ctx = canvas.getContext('2d');
+        const textInput = document.getElementById('textInput');
+        const xPosition = document.getElementById('xPosition');
+        const yPosition = document.getElementById('yPosition');
+        const fontSize = document.getElementById('fontSize');
+        const colorPicker = document.getElementById('colorPicker');
+        
+        // Load the image
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.src = "{{ url_for('static', filename='uploads/' + upload.image_filename) }}";
+        
+        // Variables for text positioning
+        let textX = {{ overlay_data.x if overlay_data else 50 }};
+        let textY = {{ overlay_data.y if overlay_data else 50 }};
+        let isDragging = false;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+        
+        // Update the position inputs
+        xPosition.value = textX;
+        yPosition.value = textY;
+        
+        // Draw the image and text on the canvas
+        img.onload = function() {
+            // Set canvas dimensions proportional to the image
+            const maxWidth = document.querySelector('.col-md-8').offsetWidth;
+            const ratio = img.height / img.width;
+            canvas.width = maxWidth;
+            canvas.height = maxWidth * ratio;
+            
+            // Draw the initial state
+            drawCanvas();
+        };
+        
+        function drawCanvas() {
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw the image scaled to fit the canvas
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            
+            // Draw the text
+            ctx.fillStyle = colorPicker.value;
+            ctx.font = `${fontSize.value}px Arial`;
+            ctx.textAlign = 'center';
+            
+            // Draw each line of text
+            const lines = textInput.value.split('\n');
+            const lineHeight = parseInt(fontSize.value) * 1.2;
+            
+            for (let i = 0; i < lines.length; i++) {
+                ctx.fillText(
+                    lines[i],
+                    textX / 100 * canvas.width,
+                    (textY / 100 * canvas.height) + (i * lineHeight)
+                );
+            }
+        }
+        
+        // Event listeners for text input and styling changes
+        textInput.addEventListener('input', drawCanvas);
+        fontSize.addEventListener('input', drawCanvas);
+        colorPicker.addEventListener('input', drawCanvas);
+        
+        // Mouse events for dragging text
+        canvas.addEventListener('mousedown', function(e) {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // Check if the click is near the text position
+            const textPosX = textX / 100 * canvas.width;
+            const textPosY = textY / 100 * canvas.height;
+            
+            const textWidth = ctx.measureText(textInput.value).width;
+            const textHeight = parseInt(fontSize.value);
+            
+            if (
+                mouseX >= textPosX - textWidth/2 - 10 && 
+                mouseX <= textPosX + textWidth/2 + 10 && 
+                mouseY >= textPosY - textHeight - 10 && 
+                mouseY <= textPosY + 10
+            ) {
+                isDragging = true;
+                dragOffsetX = textPosX - mouseX;
+                dragOffsetY = textPosY - mouseY;
+            }
+        });
+        
+        canvas.addEventListener('mousemove', function(e) {
+            if (isDragging) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                // Update the text position (as a percentage of canvas size)
+                textX = ((mouseX + dragOffsetX) / canvas.width) * 100;
+                textY = ((mouseY + dragOffsetY) / canvas.height) * 100;
+                
+                // Update the form fields
+                xPosition.value = Math.round(textX);
+                yPosition.value = Math.round(textY);
+                
+                // Redraw the canvas
+                drawCanvas();
+            }
+        });
+        
+        canvas.addEventListener('mouseup', function() {
+            isDragging = false;
+        });
+        
+        canvas.addEventListener('mouseleave', function() {
+            isDragging = false;
+        });
+    });
+</script>
+{% endblock %}

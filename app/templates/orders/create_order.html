@@ -13,7 +13,63 @@
                 <div class="card-body">
                     <div class="row mb-4">
                         <div class="col-md-6">
+                            {% if upload.text_overlay %}
+                            <div class="position-relative">
+                                <canvas id="orderImageCanvas" class="img-fluid rounded"></canvas>
+                            </div>
+                            <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    // Get the canvas
+                                    const canvas = document.getElementById('orderImageCanvas');
+                                    const ctx = canvas.getContext('2d');
+                                    
+                                    // Load the image
+                                    const img = new Image();
+                                    img.crossOrigin = "Anonymous";
+                                    img.src = "{{ url_for('static', filename='uploads/' + upload.image_filename) }}";
+                                    
+                                    // Draw the image and text on the canvas
+                                    img.onload = function() {
+                                        // Set canvas dimensions proportional to the image
+                                        const container = canvas.parentElement;
+                                        const maxWidth = container.offsetWidth;
+                                        const ratio = img.height / img.width;
+                                        canvas.width = maxWidth;
+                                        canvas.height = maxWidth * ratio;
+                                        
+                                        // Draw the image
+                                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                        
+                                        // Get text overlay data
+                                        const overlayData = {{ upload.text_overlay|tojson }};
+                                        const parsedData = JSON.parse(overlayData);
+                                        
+                                        if (parsedData && parsedData.text) {
+                                            // Apply text styling
+                                            ctx.fillStyle = parsedData.color || '#000000';
+                                            ctx.font = `${parsedData.fontSize || 24}px Arial`;
+                                            ctx.textAlign = 'center';
+                                            
+                                            // Draw each line of text
+                                            const lines = parsedData.text.split('\n');
+                                            const lineHeight = parseInt(parsedData.fontSize || 24) * 1.2;
+                                            const x = (parsedData.x / 100) * canvas.width;
+                                            const y = (parsedData.y / 100) * canvas.height;
+                                            
+                                            for (let i = 0; i < lines.length; i++) {
+                                                ctx.fillText(
+                                                    lines[i],
+                                                    x,
+                                                    y + (i * lineHeight)
+                                                );
+                                            }
+                                        }
+                                    };
+                                });
+                            </script>
+                            {% else %}
                             <img src="{{ url_for('static', filename='uploads/' + upload.image_filename) }}" class="img-fluid rounded" alt="{{ upload.caption }}">
+                            {% endif %}
                         </div>
                         <div class="col-md-6">
                             <h4>Order Details</h4>

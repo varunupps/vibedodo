@@ -1,11 +1,12 @@
 import os
 import secrets
 import requests
+import json
 from urllib.parse import urlparse
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, abort
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, abort, jsonify
 from flask_login import login_required, current_user
 from app import db
-from app.forms import UploadForm
+from app.forms import UploadForm, TextOverlayForm
 from app.models.upload import Upload
 
 main = Blueprint('main', __name__)
@@ -166,3 +167,65 @@ def view_shared(token):
     upload = Upload.query.filter_by(share_token=token, is_public=True).first_or_404()
     
     return render_template('shared_image.html', upload=upload)
+    
+@main.route('/edit-image/<int:upload_id>', methods=['GET', 'POST'])
+@login_required
+def edit_image(upload_id):
+    upload = Upload.query.get_or_404(upload_id)
+    
+    # Check if the current user is the owner of the upload
+    if upload.user_id != current_user.id and not current_user.is_admin:
+        abort(403)
+    
+    form = TextOverlayForm()
+    
+    # If the form is submitted and valid
+    if form.validate_on_submit():
+        upload.set_text_overlay(
+            text=form.text.data,
+            x=int(form.x_position.data),
+            y=int(form.y_position.data),
+            font_size=form.font_size.data,
+            color=form.color.data
+        )
+        db.session.commit()
+        flash('Your postcard has been saved with text overlay!', 'success')
+        return redirect(url_for('main.dashboard'))
+    
+    # If there's existing text overlay, pre-populate the form
+    overlay_data = upload.get_text_overlay()
+    if overlay_data and request.method == 'GET':
+        form.text.data = overlay_data.get('text', '')
+        form.x_position.data = overlay_data.get('x', 50)
+        form.y_position.data = overlay_data.get('y', 50)
+        form.font_size.data = overlay_data.get('fontSize', 24)
+        form.color.data = overlay_data.get('color', '#000000')
+    
+    return render_template('edit_image.html', form=form, upload=upload, overlay_data=overlay_data)
+
+@main.route('/api/save-text-overlay/<int:upload_id>', methods=['POST'])
+@login_required
+def save_text_overlay(upload_id):
+    upload = Upload.query.get_or_404(upload_id)
+    
+    # Check if the current user is the owner of the upload
+    if upload.user_id != current_user.id and not current_user.is_admin:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Get the JSON data from the request
+    data = request.get_json()
+    
+    if not data or 'text' not in data:
+        return jsonify({'error': 'Invalid data'}), 400
+    
+    # Save the text overlay data
+    upload.set_text_overlay(
+        text=data.get('text', ''),
+        x=data.get('x', 50),
+        y=data.get('y', 50),
+        font_size=data.get('fontSize', 24),
+        color=data.get('color', '#000000')
+    )
+    db.session.commit()
+    
+    return jsonify({'success': True})

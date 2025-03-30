@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileRequired
-from wtforms import StringField, PasswordField, SubmitField, BooleanField, TextAreaField, RadioField, ValidationError, HiddenField
-from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError, URL, Optional
+from wtforms import StringField, PasswordField, SubmitField, BooleanField, TextAreaField, RadioField, ValidationError, HiddenField, IntegerField
+from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError, URL, Optional, NumberRange
 from app.models.user import User
 
 class RegistrationForm(FlaskForm):
@@ -57,3 +57,12 @@ class OrderForm(FlaskForm):
     address = TextAreaField('Delivery Address', validators=[DataRequired(), Length(max=500)])
     phone_number = StringField('Phone Number', validators=[DataRequired(), Length(max=20)])
     submit = SubmitField('Place Order')
+    
+class TextOverlayForm(FlaskForm):
+    """Form for adding text overlay to an image"""
+    text = TextAreaField('Text', validators=[DataRequired(), Length(max=300)])
+    x_position = HiddenField('X Position', validators=[DataRequired()])
+    y_position = HiddenField('Y Position', validators=[DataRequired()])
+    font_size = IntegerField('Font Size', validators=[DataRequired(), NumberRange(min=8, max=72)], default=24)
+    color = StringField('Color', validators=[DataRequired()], default='#000000')
+    submit = SubmitField('Save Postcard')
