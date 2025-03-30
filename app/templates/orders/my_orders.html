@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+
+{% block title %}My Orders{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">My Postcard Orders</h1>
+    
+    {% if orders %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Image</th>
+                        <th>Date Ordered</th>
+                        <th>Status</th>
+                        <th>Delivery Address</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td>{{ order.id }}</td>
+                        <td>
+                            <img src="{{ url_for('static', filename='uploads/' + order.upload.image_filename) }}" 
+                                alt="Thumbnail" style="max-height: 50px;">
+                        </td>
+                        <td>{{ order.date_ordered.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            {% if order.status == 'pending' %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif order.status == 'shipped' %}
+                                <span class="badge bg-info">Shipped</span>
+                            {% elif order.status == 'completed' %}
+                                <span class="badge bg-success">Completed</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ order.address }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">You haven't placed any orders yet.</div>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">Go to Dashboard</a>
+    {% endif %}
+</div>
+{% endblock %}

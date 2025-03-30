@@ -1,0 +1,121 @@
+{% extends "layout.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Hello, {{ current_user.username }}!</h1>
+    
+    <!-- Upload form -->
+    <div class="card mb-5">
+        <div class="card-header">
+            <h3>Upload a new image</h3>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+                
+                <div class="form-group mb-3">
+                    <div class="btn-group mb-3" role="group">
+                        <input type="radio" class="btn-check" name="upload_type" id="upload_type-0" autocomplete="off" value="file" 
+                            {% if form.upload_type.data == 'file' %}checked{% endif %}>
+                        <label class="btn btn-outline-primary" for="upload_type-0">Upload File</label>
+                        
+                        <input type="radio" class="btn-check" name="upload_type" id="upload_type-1" autocomplete="off" value="url"
+                            {% if form.upload_type.data == 'url' %}checked{% endif %}>
+                        <label class="btn btn-outline-primary" for="upload_type-1">Import from URL</label>
+                    </div>
+                </div>
+                
+                <div id="file-upload-section" class="form-group mb-3" {% if form.upload_type.data == 'url' %}style="display:none"{% endif %}>
+                    {{ form.image.label(class="form-control-label") }}
+                    {{ form.image(class="form-control") }}
+                    {% if form.image.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.image.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div id="url-upload-section" class="form-group mb-3" {% if form.upload_type.data != 'url' %}style="display:none"{% endif %}>
+                    {{ form.image_url.label(class="form-control-label") }}
+                    {{ form.image_url(class="form-control", placeholder="https://example.com/image.jpg") }}
+                    {% if form.image_url.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.image_url.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group mb-3">
+                    {{ form.caption.label(class="form-control-label") }}
+                    {{ form.caption(class="form-control", rows=3) }}
+                    {% if form.caption.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in form.caption.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group mt-3">
+                    {{ form.submit(class="btn btn-primary") }}
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        // Toggle visibility of upload sections based on selected option
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileSection = document.getElementById('file-upload-section');
+            const urlSection = document.getElementById('url-upload-section');
+            const radioButtons = document.querySelectorAll('input[name="upload_type"]');
+            
+            radioButtons.forEach(function(radio) {
+                radio.addEventListener('change', function() {
+                    if (this.value === 'file') {
+                        fileSection.style.display = 'block';
+                        urlSection.style.display = 'none';
+                    } else {
+                        fileSection.style.display = 'none';
+                        urlSection.style.display = 'block';
+                    }
+                });
+            });
+        });
+    </script>
+    
+    <!-- Display uploaded images -->
+    <h3 class="mb-4">Your Uploads</h3>
+    
+    {% if uploads %}
+        <div class="row">
+            {% for upload in uploads %}
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        <img src="{{ url_for('static', filename='uploads/' + upload.image_filename) }}" class="card-img-top" alt="{{ upload.caption }}">
+                        <div class="card-body">
+                            <p class="card-text">{{ upload.caption }}</p>
+                            <small class="text-muted">Uploaded on {{ upload.date_posted.strftime('%Y-%m-%d %H:%M') }}</small>
+                            <div class="d-flex mt-2">
+                                <a href="{{ url_for('orders.create_order', upload_id=upload.id) }}" class="btn btn-sm btn-primary me-2">Order Postcard</a>
+                                <form action="{{ url_for('main.delete_upload', upload_id=upload.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this image?');">
+                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>You haven't uploaded any images yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

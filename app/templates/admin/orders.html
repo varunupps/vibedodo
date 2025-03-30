@@ -1,0 +1,69 @@
+{% extends "layout.html" %}
+
+{% block title %}Admin - Orders{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Manage Postcard Orders</h1>
+    
+    {% if orders %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>User</th>
+                        <th>Image</th>
+                        <th>Date Ordered</th>
+                        <th>Status</th>
+                        <th>Delivery Address</th>
+                        <th>Phone</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td>{{ order.id }}</td>
+                        <td>{{ order.user.username }}</td>
+                        <td>
+                            <img src="{{ url_for('static', filename='uploads/' + order.upload.image_filename) }}" 
+                                alt="Thumbnail" style="max-height: 50px;">
+                        </td>
+                        <td>{{ order.date_ordered.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            {% if order.status == 'pending' %}
+                                <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif order.status == 'shipped' %}
+                                <span class="badge bg-info">Shipped</span>
+                            {% elif order.status == 'completed' %}
+                                <span class="badge bg-success">Completed</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ order.address }}</td>
+                        <td>{{ order.phone_number }}</td>
+                        <td>
+                            <div class="btn-group">
+                                {% if order.status == 'pending' %}
+                                    <form action="{{ url_for('orders.update_order_status', order_id=order.id, status='shipped') }}" method="POST">
+                                        <button type="submit" class="btn btn-sm btn-info">Mark as Shipped</button>
+                                    </form>
+                                {% elif order.status == 'shipped' %}
+                                    <form action="{{ url_for('orders.update_order_status', order_id=order.id, status='completed') }}" method="POST">
+                                        <button type="submit" class="btn btn-sm btn-success">Mark as Completed</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">There are no orders yet.</div>
+    {% endif %}
+    
+    <a href="{{ url_for('admin.admin_dashboard') }}" class="btn btn-secondary mt-3">Back to Dashboard</a>
+</div>
+{% endblock %}
