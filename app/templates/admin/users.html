@@ -18,8 +18,9 @@
                             <th>ID</th>
                             <th>Username</th>
                             <th>Email</th>
-                            <th>Admin Status</th>
+                            <th>Roles</th>
                             <th>Uploads</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -31,11 +32,24 @@
                             <td>
                                 {% if user.is_admin %}
                                 <span class="badge bg-success">Admin</span>
-                                {% else %}
+                                {% endif %}
+                                {% if user.is_printer %}
+                                <span class="badge bg-info">Printer</span>
+                                {% endif %}
+                                {% if not user.is_admin and not user.is_printer %}
                                 <span class="badge bg-secondary">User</span>
                                 {% endif %}
                             </td>
                             <td>{{ user.uploads|length }}</td>
+                            <td>
+                                {% if not user.is_admin %}
+                                <form action="{{ url_for('admin.toggle_printer_role', user_id=user.id) }}" method="POST">
+                                    <button type="submit" class="btn btn-sm {% if user.is_printer %}btn-warning{% else %}btn-info{% endif %}">
+                                        {% if user.is_printer %}Remove Printer Role{% else %}Make Printer{% endif %}
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

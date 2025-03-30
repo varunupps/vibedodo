@@ -1,0 +1,119 @@
+{% extends "layout.html" %}
+
+{% block title %}Printer Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Printer Dashboard</h1>
+    
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Orders Ready for Printing</h3>
+                </div>
+                <div class="card-body">
+                    {% if approved_orders %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Image</th>
+                                        <th>Date Ordered</th>
+                                        <th>Approved By</th>
+                                        <th>Print Notes</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for order in approved_orders %}
+                                    <tr>
+                                        <td>{{ order.id }}</td>
+                                        <td>
+                                            <img src="{{ url_for('static', filename='uploads/' + order.upload.image_filename) }}" 
+                                                alt="Thumbnail" style="max-height: 100px;">
+                                        </td>
+                                        <td>{{ order.date_ordered.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>{{ order.approved_by.username }}</td>
+                                        <td>
+                                            {% if order.print_notes %}
+                                            {{ order.print_notes }}
+                                            {% else %}
+                                            <em>No notes</em>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <form action="{{ url_for('orders.mark_as_printed', order_id=order.id) }}" method="POST">
+                                                <button type="submit" class="btn btn-success">Mark as Printed</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No orders are currently approved for printing.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">Orders You've Printed</h3>
+                </div>
+                <div class="card-body">
+                    {% if printed_orders %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Order ID</th>
+                                        <th>Image</th>
+                                        <th>Date Ordered</th>
+                                        <th>Printed Date</th>
+                                        <th>Current Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for order in printed_orders %}
+                                    <tr>
+                                        <td>{{ order.id }}</td>
+                                        <td>
+                                            <img src="{{ url_for('static', filename='uploads/' + order.upload.image_filename) }}" 
+                                                alt="Thumbnail" style="max-height: 50px;">
+                                        </td>
+                                        <td>{{ order.date_ordered.strftime('%Y-%m-%d') }}</td>
+                                        <td>{{ order.printed_date.strftime('%Y-%m-%d') }}</td>
+                                        <td>
+                                            {% if order.status == 'printed' %}
+                                                <span class="badge bg-secondary">Printed</span>
+                                            {% elif order.status == 'shipped' %}
+                                                <span class="badge bg-info">Shipped</span>
+                                            {% elif order.status == 'completed' %}
+                                                <span class="badge bg-success">Completed</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            You haven't printed any orders yet.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -16,6 +16,7 @@
                         <th>Image</th>
                         <th>Date Ordered</th>
                         <th>Status</th>
+                        <th>Printing Info</th>
                         <th>Delivery Address</th>
                         <th>Phone</th>
                         <th>Actions</th>
@@ -34,17 +35,41 @@
                         <td>
                             {% if order.status == 'pending' %}
                                 <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif order.status == 'approved_for_printing' %}
+                                <span class="badge bg-primary">Approved for Printing</span>
+                            {% elif order.status == 'printed' %}
+                                <span class="badge bg-secondary">Printed</span>
                             {% elif order.status == 'shipped' %}
                                 <span class="badge bg-info">Shipped</span>
                             {% elif order.status == 'completed' %}
                                 <span class="badge bg-success">Completed</span>
                             {% endif %}
                         </td>
+                        <td>
+                            {% if order.printed %}
+                                <small>Printed by: {{ order.printed_by.username }}<br>
+                                On: {{ order.printed_date.strftime('%Y-%m-%d') }}</small>
+                            {% elif order.approved_for_printing %}
+                                <small>Approved by: {{ order.approved_by.username }}</small>
+                                {% if order.print_notes %}
+                                <br><small>Notes: {{ order.print_notes }}</small>
+                                {% endif %}
+                            {% else %}
+                                <small>Not sent to printer yet</small>
+                            {% endif %}
+                        </td>
                         <td>{{ order.address }}</td>
                         <td>{{ order.phone_number }}</td>
                         <td>
-                            <div class="btn-group">
+                            <div class="btn-group-vertical">
                                 {% if order.status == 'pending' %}
+                                    <form action="{{ url_for('orders.approve_for_printing', order_id=order.id) }}" method="POST" class="mb-2">
+                                        <div class="input-group mb-1">
+                                            <input type="text" name="print_notes" class="form-control form-control-sm" placeholder="Print notes">
+                                        </div>
+                                        <button type="submit" class="btn btn-sm btn-primary">Approve for Printing</button>
+                                    </form>
+                                {% elif order.status == 'printed' %}
                                     <form action="{{ url_for('orders.update_order_status', order_id=order.id, status='shipped') }}" method="POST">
                                         <button type="submit" class="btn btn-sm btn-info">Mark as Shipped</button>
                                     </form>

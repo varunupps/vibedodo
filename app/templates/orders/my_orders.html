@@ -30,6 +30,10 @@
                         <td>
                             {% if order.status == 'pending' %}
                                 <span class="badge bg-warning text-dark">Pending</span>
+                            {% elif order.status == 'approved_for_printing' %}
+                                <span class="badge bg-primary">Approved for Printing</span>
+                            {% elif order.status == 'printed' %}
+                                <span class="badge bg-secondary">Printed</span>
                             {% elif order.status == 'shipped' %}
                                 <span class="badge bg-info">Shipped</span>
                             {% elif order.status == 'completed' %}

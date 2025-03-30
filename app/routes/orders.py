@@ -1,11 +1,23 @@
+from functools import wraps
+from datetime import datetime
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
 from flask_login import login_required, current_user
 from app import db
 from app.forms import OrderForm
 from app.models.upload import Upload
 from app.models.order import Order
+from app.models.user import User
 
 orders = Blueprint('orders', __name__)
+
+def printer_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not (current_user.is_printer or current_user.is_admin):
+            flash('Printer access required', 'danger')
+            return redirect(url_for('main.index'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 @orders.route('/order/create/<int:upload_id>', methods=['GET', 'POST'])
 @login_required
@@ -65,7 +77,7 @@ def update_order_status(order_id, status):
         abort(403)
     
     # Valid statuses
-    valid_statuses = ['pending', 'shipped', 'completed']
+    valid_statuses = ['pending', 'approved_for_printing', 'printed', 'shipped', 'completed']
     if status not in valid_statuses:
         flash('Invalid status!', 'danger')
         return redirect(url_for('orders.admin_orders'))
@@ -75,7 +87,89 @@ def update_order_status(order_id, status):
     
     # Update status
     order.status = status
+    
+    # Additional fields based on status
+    if status == 'approved_for_printing':
+        order.approved_for_printing = True
+        order.approved_by_id = current_user.id
+    elif status == 'printed':
+        order.printed = True
+        order.printed_by_id = current_user.id
+        order.printed_date = datetime.utcnow()
+    
+    # Add print notes if provided
+    if request.form.get('print_notes'):
+        order.print_notes = request.form.get('print_notes')
+    
     db.session.commit()
     
     flash(f'Order {order_id} has been updated to {status}!', 'success')
     return redirect(url_for('orders.admin_orders'))
+
+@orders.route('/admin/order/<int:order_id>/approve-for-printing', methods=['POST'])
+@login_required
+def approve_for_printing(order_id):
+    # Check if user is admin
+    if not current_user.is_admin:
+        abort(403)
+    
+    # Get the order
+    order = Order.query.get_or_404(order_id)
+    
+    # Update fields
+    order.approved_for_printing = True
+    order.approved_by_id = current_user.id
+    order.status = 'approved_for_printing'
+    
+    # Add notes if provided
+    if request.form.get('print_notes'):
+        order.print_notes = request.form.get('print_notes')
+    
+    db.session.commit()
+    
+    flash(f'Order {order_id} has been approved for printing!', 'success')
+    return redirect(url_for('orders.admin_orders'))
+
+# Printer Routes
+@orders.route('/printer/dashboard')
+@login_required
+@printer_required
+def printer_dashboard():
+    # Get all orders approved for printing but not yet printed
+    approved_orders = Order.query.filter_by(
+        approved_for_printing=True, 
+        printed=False
+    ).order_by(Order.date_ordered.asc()).all()
+    
+    # Get all orders that this printer has printed
+    printed_orders = Order.query.filter_by(
+        printed=True,
+        printed_by_id=current_user.id
+    ).order_by(Order.printed_date.desc()).all()
+    
+    return render_template('orders/printer_dashboard.html', 
+                          approved_orders=approved_orders,
+                          printed_orders=printed_orders)
+
+@orders.route('/printer/order/<int:order_id>/mark-printed', methods=['POST'])
+@login_required
+@printer_required
+def mark_as_printed(order_id):
+    # Get the order
+    order = Order.query.get_or_404(order_id)
+    
+    # Verify the order is approved for printing and not already printed
+    if not order.approved_for_printing or order.printed:
+        flash('Order cannot be marked as printed!', 'danger')
+        return redirect(url_for('orders.printer_dashboard'))
+    
+    # Mark as printed
+    order.printed = True
+    order.printed_by_id = current_user.id
+    order.printed_date = datetime.utcnow()
+    order.status = 'printed'
+    
+    db.session.commit()
+    
+    flash(f'Order {order_id} has been marked as printed!', 'success')
+    return redirect(url_for('orders.printer_dashboard'))
