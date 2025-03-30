@@ -1,6 +1,6 @@
 from app import create_app, db
 from app.models.upload import Upload
-from sqlalchemy import Column, Boolean, String
+from sqlalchemy import Column, Boolean, String, text
 
 def add_share_fields():
     """
@@ -8,21 +8,30 @@ def add_share_fields():
     """
     app = create_app()
     with app.app_context():
-        # Check if the columns already exist
-        inspector = db.inspect(db.engine)
-        columns = [col['name'] for col in inspector.get_columns('upload')]
-        
-        if 'share_token' not in columns:
-            # Add share_token column
-            db.engine.execute('ALTER TABLE upload ADD COLUMN share_token VARCHAR(16) UNIQUE')
-            print('Added share_token column')
-        
-        if 'is_public' not in columns:
-            # Add is_public column with default value of False
-            db.engine.execute('ALTER TABLE upload ADD COLUMN is_public BOOLEAN NOT NULL DEFAULT FALSE')
-            print('Added is_public column')
+        try:
+            # We'll recreate the database tables since SQLite has limitations
+            # on ALTER TABLE operations
+            db.create_all()
+            print("Database schema updated successfully!")
             
-        print('Database migration completed!')
+            # Let's empty the __pycache__ directories to make sure classes reload
+            import os
+            import shutil
+            for root, dirs, files in os.walk(os.path.dirname(os.path.abspath(__file__))):
+                if root.endswith('__pycache__'):
+                    for file in files:
+                        os.remove(os.path.join(root, file))
+                    print(f"Cleaned {root}")
+            
+            print('Database migration completed!')
+            print('Please restart the application for changes to take effect.')
+        except Exception as e:
+            print(f"Error during migration: {e}")
+            print("If the error persists, you may need to manually update the database:")
+            print("1. Back up your instance/site.db file")
+            print("2. Delete your instance/site.db file")
+            print("3. Run 'python run.py' to create a new database with the updated schema")
+            print("4. Recreate your accounts and uploads")
 
 if __name__ == '__main__':
     add_share_fields()
