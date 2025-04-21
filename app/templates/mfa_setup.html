@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+
+{% block title %}MFA Setup{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <h1 class="card-title mb-4">Two-Factor Authentication Setup</h1>
+        
+        {% if mfa_enabled %}
+            <div class="alert alert-success">
+                Two-factor authentication is currently enabled for your account.
+            </div>
+            <form method="POST" action="{{ url_for('auth.mfa_disable') }}">
+                {{ form.hidden_tag() }}
+                <button type="submit" class="btn btn-danger">Disable Two-Factor Authentication</button>
+            </form>
+        {% else %}
+            <p>Enhance your account security by setting up two-factor authentication.</p>
+            <ol>
+                <li>Install an authenticator app like Google Authenticator or Authy on your mobile device.</li>
+                <li>Scan the QR code below with your authenticator app.</li>
+                <li>Enter the 6-digit verification code shown in your app.</li>
+            </ol>
+            
+            <div class="text-center mt-4 mb-4">
+                <img src="{{ url_for('auth.mfa_qrcode') }}" alt="QR Code" style="max-width: 250px;">
+            </div>
+            
+            <p>Or manually enter this code in your app: <code>{{ current_user.mfa_secret }}</code></p>
+            
+            <form method="POST" action="">
+                {{ form.hidden_tag() }}
+                <div class="form-group mt-3">
+                    {{ form.token.label }}
+                    {{ form.token(class="form-control", placeholder="6-digit code") }}
+                    {% if form.token.errors %}
+                        {% for error in form.token.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                <div class="form-group mt-3">
+                    {{ form.submit(class="btn btn-primary mt-3") }}
+                </div>
+            </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

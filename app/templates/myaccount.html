@@ -1,0 +1,281 @@
+{% extends "layout.html" %}
+
+{% block title %}My Account{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">My Account</h1>
+    
+    <div class="row">
+        <div class="col-md-3">
+            <div class="list-group mb-4">
+                <a href="#account-info" class="list-group-item list-group-item-action active">Account Information</a>
+                <a href="#security" class="list-group-item list-group-item-action">Security</a>
+            </div>
+        </div>
+        
+        <div class="col-md-9">
+            <!-- Account Information -->
+            <section id="account-info" class="mb-5">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3>Account Information</h3>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                            <i class="bi bi-pencil"></i> Edit
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <strong>Username:</strong> {{ current_user.username }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Email:</strong> {{ current_user.email }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Country:</strong> 
+                            {% if current_user.country %}
+                                {% set country_names = {
+                                    'US': 'United States',
+                                    'GB': 'United Kingdom',
+                                    'CA': 'Canada',
+                                    'AU': 'Australia',
+                                    'DE': 'Germany',
+                                    'FR': 'France',
+                                    'IN': 'India',
+                                    'JP': 'Japan',
+                                    'CN': 'China',
+                                    'BR': 'Brazil',
+                                    'RU': 'Russia',
+                                    'ZA': 'South Africa',
+                                    'MX': 'Mexico',
+                                    'ES': 'Spain',
+                                    'IT': 'Italy',
+                                    'NL': 'Netherlands',
+                                    'SE': 'Sweden',
+                                    'NO': 'Norway',
+                                    'FI': 'Finland',
+                                    'DK': 'Denmark',
+                                    'NZ': 'New Zealand',
+                                    'SG': 'Singapore',
+                                    'AE': 'United Arab Emirates',
+                                    'SA': 'Saudi Arabia',
+                                    'TR': 'Turkey',
+                                    'KR': 'South Korea'
+                                } %}
+                                {{ country_names.get(current_user.country, current_user.country) }}
+                            {% else %}
+                                Not provided
+                            {% endif %}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Phone Number:</strong> 
+                            {% if current_user.phone_number %}
+                                {{ current_user.phone_number }}
+                            {% else %}
+                                Not provided
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Security Settings -->
+            <section id="security" class="mb-5">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Security</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex align-items-center mb-4">
+                            <div>
+                                <h5>Two-Factor Authentication</h5>
+                                <p class="mb-0">
+                                    {% if current_user.mfa_enabled %}
+                                        <span class="badge bg-success">Enabled</span> Your account is protected with 2FA.
+                                    {% else %}
+                                        <span class="badge bg-warning">Disabled</span> Add an extra layer of security to your account.
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="ms-auto">
+                                {% if current_user.mfa_enabled %}
+                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#mfaModal">
+                                        Manage 2FA
+                                    </button>
+                                {% else %}
+                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#mfaModal">
+                                        Enable 2FA
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Edit Profile Modal -->
+            <div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editProfileModalLabel">Edit Profile</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form method="POST" action="{{ url_for('auth.update_profile') }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+                                
+                                <div class="mb-3">
+                                    <label for="country" class="form-label">Country</label>
+                                    <select class="form-select" id="country" name="country">
+                                        <option value="">Select your country</option>
+                                        <option value="US" {% if current_user.country == 'US' %}selected{% endif %}>United States</option>
+                                        <option value="GB" {% if current_user.country == 'GB' %}selected{% endif %}>United Kingdom</option>
+                                        <option value="CA" {% if current_user.country == 'CA' %}selected{% endif %}>Canada</option>
+                                        <option value="AU" {% if current_user.country == 'AU' %}selected{% endif %}>Australia</option>
+                                        <option value="DE" {% if current_user.country == 'DE' %}selected{% endif %}>Germany</option>
+                                        <option value="FR" {% if current_user.country == 'FR' %}selected{% endif %}>France</option>
+                                        <option value="IN" {% if current_user.country == 'IN' %}selected{% endif %}>India</option>
+                                        <option value="JP" {% if current_user.country == 'JP' %}selected{% endif %}>Japan</option>
+                                        <option value="CN" {% if current_user.country == 'CN' %}selected{% endif %}>China</option>
+                                        <option value="BR" {% if current_user.country == 'BR' %}selected{% endif %}>Brazil</option>
+                                        <option value="RU" {% if current_user.country == 'RU' %}selected{% endif %}>Russia</option>
+                                        <option value="ZA" {% if current_user.country == 'ZA' %}selected{% endif %}>South Africa</option>
+                                        <option value="MX" {% if current_user.country == 'MX' %}selected{% endif %}>Mexico</option>
+                                        <option value="ES" {% if current_user.country == 'ES' %}selected{% endif %}>Spain</option>
+                                        <option value="IT" {% if current_user.country == 'IT' %}selected{% endif %}>Italy</option>
+                                        <option value="NL" {% if current_user.country == 'NL' %}selected{% endif %}>Netherlands</option>
+                                        <option value="SE" {% if current_user.country == 'SE' %}selected{% endif %}>Sweden</option>
+                                        <option value="NO" {% if current_user.country == 'NO' %}selected{% endif %}>Norway</option>
+                                        <option value="FI" {% if current_user.country == 'FI' %}selected{% endif %}>Finland</option>
+                                        <option value="DK" {% if current_user.country == 'DK' %}selected{% endif %}>Denmark</option>
+                                        <option value="NZ" {% if current_user.country == 'NZ' %}selected{% endif %}>New Zealand</option>
+                                        <option value="SG" {% if current_user.country == 'SG' %}selected{% endif %}>Singapore</option>
+                                        <option value="AE" {% if current_user.country == 'AE' %}selected{% endif %}>United Arab Emirates</option>
+                                        <option value="SA" {% if current_user.country == 'SA' %}selected{% endif %}>Saudi Arabia</option>
+                                        <option value="TR" {% if current_user.country == 'TR' %}selected{% endif %}>Turkey</option>
+                                        <option value="KR" {% if current_user.country == 'KR' %}selected{% endif %}>South Korea</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="phone_number" class="form-label">Phone Number</label>
+                                    <input type="text" class="form-control" id="edit_phone_number" name="phone_number" value="{{ current_user.phone_number or '' }}">
+                                    <div class="form-text">Include country code (e.g., +1 for US)</div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- MFA Modal -->
+            <div class="modal fade" id="mfaModal" tabindex="-1" aria-labelledby="mfaModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="mfaModalLabel">Two-Factor Authentication</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            {% if current_user.mfa_enabled %}
+                                <div class="alert alert-success">
+                                    Two-factor authentication is currently enabled for your account.
+                                </div>
+                                <form method="POST" action="{{ url_for('auth.mfa_disable') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+                                    <button type="submit" class="btn btn-danger">Disable Two-Factor Authentication</button>
+                                </form>
+                            {% else %}
+                                <p>Enhance your account security by setting up two-factor authentication.</p>
+                                <ol>
+                                    <li>Install an authenticator app like Google Authenticator or Authy on your mobile device.</li>
+                                    <li>Scan the QR code below with your authenticator app.</li>
+                                    <li>Enter the 6-digit verification code shown in your app.</li>
+                                </ol>
+                                
+                                <div class="text-center mt-4 mb-4">
+                                    <img src="{{ url_for('auth.mfa_qrcode') }}" alt="QR Code" style="max-width: 250px;">
+                                </div>
+                                
+                                <p>Or manually enter this code in your app: <code>{{ current_user.mfa_secret if current_user.mfa_secret else '' }}</code></p>
+                                
+                                <form method="POST" action="{{ url_for('auth.mfa_setup') }}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+                                    <div class="form-group mt-3">
+                                        <label for="token">Verification Code</label>
+                                        <input type="text" class="form-control" id="token" name="token" placeholder="6-digit code" required>
+                                    </div>
+                                    <div class="form-group mt-3">
+                                        <button type="submit" class="btn btn-primary">Verify and Enable</button>
+                                    </div>
+                                </form>
+                            {% endif %}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Country code mapping
+    const countryCodes = {
+        'US': '+1',
+        'GB': '+44',
+        'CA': '+1',
+        'AU': '+61',
+        'DE': '+49',
+        'FR': '+33',
+        'IN': '+91',
+        'JP': '+81',
+        'CN': '+86',
+        'BR': '+55',
+        'RU': '+7',
+        'ZA': '+27',
+        'MX': '+52',
+        'ES': '+34',
+        'IT': '+39',
+        'NL': '+31',
+        'SE': '+46',
+        'NO': '+47',
+        'FI': '+358',
+        'DK': '+45',
+        'NZ': '+64',
+        'SG': '+65',
+        'AE': '+971',
+        'SA': '+966',
+        'TR': '+90',
+        'KR': '+82'
+    };
+
+    // When the country dropdown changes, update the phone number field
+    document.addEventListener('DOMContentLoaded', function() {
+        const countrySelect = document.getElementById('country');
+        const phoneField = document.getElementById('edit_phone_number');
+        
+        if (countrySelect && phoneField) {
+            // Function to set country code
+            function setCountryCode() {
+                const countryCode = countryCodes[countrySelect.value];
+                
+                // Only update if country is selected and phone field doesn't already have a value or starts with a different country code
+                if (countryCode && (!phoneField.value || !phoneField.value.startsWith(countryCode))) {
+                    // Preserve any existing number after the country code
+                    const existingNumber = phoneField.value.replace(/^\+\d+\s*/, '');
+                    phoneField.value = countryCode + (existingNumber ? ' ' + existingNumber : '');
+                }
+            }
+            
+            // Update on change
+            countrySelect.addEventListener('change', setCountryCode);
+        }
+    });
+</script>
+{% endblock %}

@@ -3,7 +3,7 @@ import secrets
 import requests
 import json
 from urllib.parse import urlparse
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, abort, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, abort, jsonify, session
 from flask_login import login_required, current_user
 from app import db
 from app.forms import UploadForm, TextOverlayForm
@@ -90,29 +90,79 @@ def download_image(image_url):
 def dashboard():
     form = UploadForm()
     
+    # Handle welcome dialog for first-time users
+    show_welcome_dialog = session.pop('show_welcome_dialog', False)
+    if show_welcome_dialog and not current_user.has_seen_welcome:
+        # Mark the user as having seen the welcome message
+        current_user.has_seen_welcome = True
+        db.session.commit()
+    
     if form.validate_on_submit():
         try:
             if form.upload_type.data == 'file':
                 picture_filename = save_picture(form.image.data)
             else:  # form.upload_type.data == 'url'
                 picture_filename = download_image(form.image_url.data)
-                
+            
+            # Classify the uploaded image
+            from app.utils.image_classifier import ImageClassifier
+            image_path = os.path.join(current_app.config['UPLOAD_FOLDER'], picture_filename)
+            classification, is_mock = ImageClassifier.classify_image(image_path)
+            print(f"Image classification result: {classification} (Mock: {is_mock})")
+            
+            # Create the upload record
             upload = Upload(
                 image_filename=picture_filename,
                 caption=form.caption.data,
-                author=current_user
+                author=current_user,
+                classification=classification,
+                is_mock_classified=is_mock
             )
             db.session.add(upload)
             db.session.commit()
-            flash('Your image has been uploaded!', 'success')
+            
+            # Add classification information and show modal if needed
+            if classification == "GAMING":
+                if is_mock:
+                    flash('Your image has been classified as gaming content (using mock classifier).', 'info')
+                else:
+                    flash('Your gaming image has been uploaded!', 'success')
+            else:
+                if is_mock:
+                    flash('Warning: Your image has been classified as non-gaming content (using mock classifier).', 'warning')
+                else:
+                    flash('Warning: Your image has been classified as non-gaming content.', 'warning')
+                    
+                # Add session flag to trigger modal on next page load
+                session['show_nongaming_warning'] = upload.id
         except ValueError as e:
             flash(f'Error: {str(e)}', 'danger')
         return redirect(url_for('main.dashboard'))
     
     # Get all uploads by the current user
-    uploads = Upload.query.filter_by(user_id=current_user.id).order_by(Upload.date_posted.desc()).all()
+    all_uploads = Upload.query.filter_by(user_id=current_user.id).order_by(Upload.date_posted.desc()).all()
     
-    return render_template('dashboard.html', form=form, uploads=uploads)
+    # Get uploads with text overlays for the "Your Edits" section
+    edited_uploads = [upload for upload in all_uploads if upload.text_overlay]
+    
+    # Debug information
+    print(f"Total uploads: {len(all_uploads)}")
+    print(f"Uploads with text overlay: {len(edited_uploads)}")
+    
+    # Check if we need to show the non-gaming warning modal
+    show_modal_id = session.pop('show_nongaming_warning', None)
+    
+    for upload in all_uploads:
+        print(f"Upload ID: {upload.id}, Filename: {upload.image_filename}, Has text overlay: {upload.text_overlay is not None}")
+        if upload.classification:
+            print(f"  Classification: {upload.classification}")
+        
+    return render_template('dashboard.html', 
+                          form=form, 
+                          uploads=all_uploads, 
+                          edited_uploads=edited_uploads, 
+                          show_modal_id=show_modal_id,
+                          show_welcome_dialog=show_welcome_dialog)
 
 @main.route('/delete-upload/<int:upload_id>', methods=['POST'])
 @login_required
@@ -150,6 +200,11 @@ def share_upload(upload_id):
     # Check if the current user is the owner of the upload
     if upload.user_id != current_user.id and not current_user.is_admin:
         abort(403)
+        
+    # Check if the upload is classified as non-gaming content
+    if upload.classification == "OTHER":
+        flash('Sharing is not available for non-gaming content.', 'warning')
+        return redirect(url_for('main.dashboard'))
     
     # Generate a share token if it doesn't exist
     if not upload.share_token:
@@ -176,21 +231,78 @@ def edit_image(upload_id):
     # Check if the current user is the owner of the upload
     if upload.user_id != current_user.id and not current_user.is_admin:
         abort(403)
+        
+    # Check if the upload is classified as non-gaming content
+    if upload.classification == "OTHER":
+        flash('Text editing is not available for non-gaming content.', 'warning')
+        return redirect(url_for('main.dashboard'))
     
     form = TextOverlayForm()
     
-    # If the form is submitted and valid
-    if form.validate_on_submit():
-        upload.set_text_overlay(
-            text=form.text.data,
-            x=int(form.x_position.data),
-            y=int(form.y_position.data),
-            font_size=form.font_size.data,
-            color=form.color.data
-        )
-        db.session.commit()
-        flash('Your postcard has been saved with text overlay!', 'success')
-        return redirect(url_for('main.dashboard'))
+    # Print debug info for form submission
+    if request.method == 'POST':
+        print(f"\n--- POST request to edit_image for upload ID {upload_id} ---")
+        print(f"Form data: {request.form}")
+        print(f"Form validation: {form.validate()}")
+        if not form.validate():
+            for field, errors in form.errors.items():
+                print(f"Field {field} errors: {errors}")
+    
+    # If the form is submitted
+    if request.method == 'POST':
+        try:
+            # Get form data with fallbacks to ensure we always have values
+            text = form.text.data or "Sample Text"
+            
+            # Handle missing position values
+            try:
+                x = int(form.x_position.data) if form.x_position.data else 50
+            except (ValueError, TypeError):
+                x = 50
+                
+            try:
+                y = int(form.y_position.data) if form.y_position.data else 50
+            except (ValueError, TypeError):
+                y = 50
+                
+            font_size = form.font_size.data or 24
+            color = form.color.data or "#000000"
+            
+            # Print what we're saving
+            print(f"Setting text overlay for Upload ID {upload.id}:")
+            print(f"  Text: {text}")
+            print(f"  Position: ({x}, {y})")
+            print(f"  Font size: {font_size}")
+            print(f"  Color: {color}")
+            
+            # Set overlay data
+            upload.set_text_overlay(
+                text=text,
+                x=x,
+                y=y,
+                font_size=font_size,
+                color=color
+            )
+            
+            # Commit the changes
+            db.session.commit()
+            
+            # Verify the overlay was saved
+            overlay_data = upload.get_text_overlay()
+            if overlay_data:
+                print(f"Verified overlay was saved: {overlay_data}")
+            else:
+                print("Warning: overlay_data is None after saving")
+                
+            flash('Your postcard has been saved with text overlay!', 'success')
+        except Exception as e:
+            print(f"Error saving text overlay: {str(e)}")
+            flash(f'Error saving text overlay: {str(e)}', 'danger')
+            db.session.rollback()
+        
+        # ALWAYS redirect to the dashboard
+        print("Redirecting to dashboard")
+        return redirect(url_for('main.dashboard'), code=302)
     
     # If there's existing text overlay, pre-populate the form
     overlay_data = upload.get_text_overlay()
@@ -211,6 +323,10 @@ def save_text_overlay(upload_id):
     # Check if the current user is the owner of the upload
     if upload.user_id != current_user.id and not current_user.is_admin:
         return jsonify({'error': 'Unauthorized'}), 403
+        
+    # Check if the upload is classified as non-gaming content
+    if upload.classification == "OTHER":
+        return jsonify({'error': 'Text editing is not available for non-gaming content.'}), 403
     
     # Get the JSON data from the request
     data = request.get_json()

@@ -28,14 +28,34 @@ def create_order(upload_id):
     # Check if the current user is the owner of the upload
     if upload.user_id != current_user.id:
         abort(403)
+        
+    # Check if the upload is classified as non-gaming content
+    if upload.classification == "OTHER":
+        flash('Ordering postcards is not available for non-gaming content.', 'warning')
+        return redirect(url_for('main.dashboard'))
     
     form = OrderForm()
     form.upload_id.data = upload_id
     
     if form.validate_on_submit():
+        # Calculate price based on selected size
+        price_map = {
+            'small': 5.00,   # Small (4" x 6") - $5 USD
+            'medium': 7.00,  # Medium (5" x 7") - $7 USD
+            'large': 10.00   # Large (6" x 11") - $10 USD
+        }
+        selected_size = form.size.data
+        quantity = form.quantity.data
+        unit_price = price_map.get(selected_size, 5.00)
+        total_price = unit_price * quantity
+        
         order = Order(
             user_id=current_user.id,
             upload_id=upload_id,
+            size=selected_size,
+            quantity=quantity,
+            price=unit_price,
+            total_price=total_price,
             address=form.address.data,
             phone_number=form.phone_number.data,
             status='pending'
@@ -45,10 +65,14 @@ def create_order(upload_id):
         flash('Your postcard order has been placed!', 'success')
         return redirect(url_for('orders.my_orders'))
     
-    # Pass pricing information to template
-    price = 10.00  # $10 USD for each postcard
+    # Define size dimensions and prices for the template
+    size_info = {
+        'small': {'dimensions': '4" x 6"', 'price': 5.00},
+        'medium': {'dimensions': '5" x 7"', 'price': 7.00},
+        'large': {'dimensions': '6" x 11"', 'price': 10.00}
+    }
     
-    return render_template('orders/create_order.html', upload=upload, form=form, price=price)
+    return render_template('orders/create_order.html', upload=upload, form=form, size_info=size_info)
 
 @orders.route('/my-orders')
 @login_required

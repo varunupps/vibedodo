@@ -6,6 +6,43 @@
 <div class="container mt-5">
     <h1 class="mb-4">Hello, {{ current_user.username }}!</h1>
     
+    <!-- Welcome Dialog Modal -->
+    {% if show_welcome_dialog %}
+    <div class="modal fade" id="welcomeModal" tabindex="-1" aria-labelledby="welcomeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="welcomeModalLabel">Welcome to VibeDodo!</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-3">
+                        <i class="bi bi-emoji-smile text-primary" style="font-size: 3rem;"></i>
+                    </div>
+                    <h4 class="text-center">Getting Started</h4>
+                    <p>Welcome to VibeDodo, the place to share your gaming moments! Here's how to get started:</p>
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="bi bi-1-circle-fill text-primary me-2"></i>
+                        <span>Upload a gaming image using the form below</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="bi bi-2-circle-fill text-primary me-2"></i>
+                        <span>Add custom text to your images</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="bi bi-3-circle-fill text-primary me-2"></i>
+                        <span>Order postcards or share your gaming moments!</span>
+                    </div>
+                    <p class="mt-3 text-muted">You can upload by selecting a file from your device or pasting an image URL.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Got it!</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
     <!-- Upload form -->
     <div class="card mb-5">
         <div class="card-header">
@@ -99,21 +136,47 @@
             {% for upload in uploads %}
                 <div class="col-md-4 mb-4">
                     <div class="card">
-                        <img src="{{ url_for('static', filename='uploads/' + upload.image_filename) }}" class="card-img-top" alt="{{ upload.caption }}">
+                        <div class="position-relative">
+                            <img src="{{ url_for('static', filename='uploads/' + upload.image_filename) }}" class="card-img-top" alt="{{ upload.caption }}">
+                            {% if upload.classification == "OTHER" %}
+                                <div class="position-absolute top-0 end-0 mt-2 me-2">
+                                    <span class="badge bg-warning" data-bs-toggle="modal" data-bs-target="#nonGamingModal-{{ upload.id }}" style="cursor: pointer;">
+                                        <i class="bi bi-exclamation-triangle"></i> Non-Gaming
+                                    </span>
+                                </div>
+                            {% endif %}
+                        </div>
                         <div class="card-body">
                             <p class="card-text">{{ upload.caption }}</p>
                             <small class="text-muted">Uploaded on {{ upload.date_posted.strftime('%Y-%m-%d %H:%M') }}</small>
-                            <div class="d-flex mt-2">
-                                <a href="{{ url_for('orders.create_order', upload_id=upload.id) }}" class="btn btn-sm btn-primary me-2">Order Postcard</a>
-                                <a href="{{ url_for('main.edit_image', upload_id=upload.id) }}" class="btn btn-sm btn-info me-2">Add Text</a>
-                                <form action="{{ url_for('main.share_upload', upload_id=upload.id) }}" method="POST" class="me-2">
-                                    <button type="submit" class="btn btn-sm btn-success">
-                                        {% if upload.is_public %}View Share Link{% else %}Share{% endif %}
+                            <div class="d-flex flex-wrap mt-2">
+                                {% if upload.classification == "OTHER" %}
+                                    <!-- For non-gaming content, show disabled buttons for unavailable actions -->
+                                    <button type="button" class="btn btn-sm btn-secondary me-2 mb-2" disabled data-bs-toggle="tooltip" title="This action is only available for gaming content">
+                                        <i class="bi bi-lock"></i> Order Postcard
                                     </button>
-                                </form>
-                                <form action="{{ url_for('main.delete_upload', upload_id=upload.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this image?');">
-                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                                </form>
+                                    <button type="button" class="btn btn-sm btn-secondary me-2 mb-2" disabled data-bs-toggle="tooltip" title="This action is only available for gaming content">
+                                        <i class="bi bi-lock"></i> Add Text
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary me-2 mb-2" disabled data-bs-toggle="tooltip" title="This action is only available for gaming content">
+                                        <i class="bi bi-lock"></i> Share
+                                    </button>
+                                    <form action="{{ url_for('main.delete_upload', upload_id=upload.id) }}" method="POST" class="mb-2" onsubmit="return confirm('Are you sure you want to delete this image?');">
+                                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                    </form>
+                                {% else %}
+                                    <!-- For gaming content, show all controls -->
+                                    <a href="{{ url_for('orders.create_order', upload_id=upload.id) }}" class="btn btn-sm btn-primary me-2 mb-2">Order Postcard</a>
+                                    <a href="{{ url_for('main.edit_image', upload_id=upload.id) }}" class="btn btn-sm btn-info me-2 mb-2">Add Text</a>
+                                    <form action="{{ url_for('main.share_upload', upload_id=upload.id) }}" method="POST" class="me-2 mb-2">
+                                        <button type="submit" class="btn btn-sm btn-success">
+                                            {% if upload.is_public %}View Share Link{% else %}Share{% endif %}
+                                        </button>
+                                    </form>
+                                    <form action="{{ url_for('main.delete_upload', upload_id=upload.id) }}" method="POST" class="mb-2" onsubmit="return confirm('Are you sure you want to delete this image?');">
+                                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                    </form>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -123,5 +186,170 @@
     {% else %}
         <p>You haven't uploaded any images yet.</p>
     {% endif %}
+    
+    <!-- Display edited images -->
+    <h3 class="mt-5 mb-4">Your Edits</h3>
+    {% if edited_uploads %}
+        <div class="row">
+            {% for upload in edited_uploads %}
+                <div class="col-md-4 mb-4">
+                    <div class="card border-success">
+                        <div class="card-header bg-success text-white">Edited Postcard</div>
+                        <div class="position-relative">
+                            <img src="{{ url_for('static', filename='uploads/' + upload.image_filename) }}" class="card-img-top" alt="{{ upload.caption }}">
+                            {% if upload.classification == "OTHER" %}
+                                <div class="position-absolute top-0 end-0 mt-2 me-2">
+                                    <span class="badge bg-warning" data-bs-toggle="modal" data-bs-target="#nonGamingModal-{{ upload.id }}" style="cursor: pointer;">
+                                        <i class="bi bi-exclamation-triangle"></i> Non-Gaming
+                                    </span>
+                                </div>
+                            {% endif %}
+                            {% if upload.text_overlay %}
+                                {% set overlay = upload.get_text_overlay() %}
+                                {% if overlay %}
+                                    <div class="position-absolute" style="
+                                        top: 0; 
+                                        left: 0; 
+                                        width: 100%; 
+                                        height: 100%; 
+                                        display: flex; 
+                                        justify-content: center; 
+                                        align-items: center; 
+                                        pointer-events: none;
+                                    ">
+                                        <div style="
+                                            position: absolute; 
+                                            left: {{ overlay.x }}%; 
+                                            top: {{ overlay.y }}%; 
+                                            transform: translate(-50%, -50%);
+                                            color: {{ overlay.color }};
+                                            font-size: {{ overlay.fontSize }}px;
+                                            text-align: center;
+                                            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+                                            max-width: 90%;
+                                            word-wrap: break-word;
+                                        ">{{ overlay.text|nl2br|safe }}</div>
+                                    </div>
+                                {% else %}
+                                    <div class="position-absolute" style="top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; pointer-events: none;">
+                                        <div style="background-color: rgba(255,0,0,0.3); padding: 10px;">Error: Could not parse overlay data</div>
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">{{ upload.caption }}</p>
+                            <small class="text-muted">Edited version</small>
+                            <div class="d-flex flex-wrap mt-2">
+                                {% if upload.classification == "OTHER" %}
+                                    <!-- For non-gaming content, show disabled buttons for unavailable actions -->
+                                    <button type="button" class="btn btn-sm btn-secondary me-2 mb-2" disabled data-bs-toggle="tooltip" title="This action is only available for gaming content">
+                                        <i class="bi bi-lock"></i> Order Postcard
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary me-2 mb-2" disabled data-bs-toggle="tooltip" title="This action is only available for gaming content">
+                                        <i class="bi bi-lock"></i> Edit Text
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-secondary me-2 mb-2" disabled data-bs-toggle="tooltip" title="This action is only available for gaming content">
+                                        <i class="bi bi-lock"></i> Share
+                                    </button>
+                                    <form action="{{ url_for('main.delete_upload', upload_id=upload.id) }}" method="POST" class="mb-2" onsubmit="return confirm('Are you sure you want to delete this edited image?');">
+                                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                    </form>
+                                {% else %}
+                                    <!-- For gaming content, show all controls -->
+                                    <a href="{{ url_for('orders.create_order', upload_id=upload.id) }}" class="btn btn-sm btn-primary me-2 mb-2">Order Postcard</a>
+                                    <a href="{{ url_for('main.edit_image', upload_id=upload.id) }}" class="btn btn-sm btn-info me-2 mb-2">Edit Text</a>
+                                    <form action="{{ url_for('main.share_upload', upload_id=upload.id) }}" method="POST" class="me-2 mb-2">
+                                        <button type="submit" class="btn btn-sm btn-success">
+                                            {% if upload.is_public %}View Share Link{% else %}Share{% endif %}
+                                        </button>
+                                    </form>
+                                    <form action="{{ url_for('main.delete_upload', upload_id=upload.id) }}" method="POST" class="mb-2" onsubmit="return confirm('Are you sure you want to delete this edited image?');">
+                                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <p>You don't have any edited images yet. Add text to your uploaded images using the "Add Text" button.</p>
+        </div>
+    {% endif %}
+
+    <!-- Non-Gaming Modal Templates -->
+    {% for upload in uploads %}
+        {% if upload.classification == "OTHER" %}
+            <div class="modal fade" id="nonGamingModal-{{ upload.id }}" tabindex="-1" aria-labelledby="nonGamingModalLabel-{{ upload.id }}" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header bg-warning">
+                            <h5 class="modal-title" id="nonGamingModalLabel-{{ upload.id }}">Non-Gaming Content Detected</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="text-center mb-3">
+                                <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 3rem;"></i>
+                            </div>
+                            <p>This image has been classified as <strong>non-gaming content</strong>.</p>
+                            
+                            {% if upload.is_mock_classified %}
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i> Classification was performed by a mock classifier.
+                                </div>
+                            {% endif %}
+                            
+                            <p>VibeDodo is a platform specifically for gaming-related images. Due to this classification:</p>
+                            <ul>
+                                <li><strong>Limited Functionality:</strong> Only the Delete button is available for non-gaming images</li>
+                                <li><strong>Restricted Actions:</strong> Ordering postcards, adding text, and sharing are disabled</li>
+                                <li><strong>Recommendation:</strong> We suggest uploading gaming-related content for full platform features</li>
+                            </ul>
+                            
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-circle"></i> Non-gaming content is not eligible for VibeDodo platform features.
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    {% endfor %}
 </div>
+
+{% if show_modal_id %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show the non-gaming warning modal for the newly uploaded image
+            var warningModal = new bootstrap.Modal(document.getElementById('nonGamingModal-{{ show_modal_id }}'));
+            warningModal.show();
+        });
+    </script>
+{% endif %}
+
+{% if show_welcome_dialog %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Show the welcome dialog for first-time users
+            var welcomeModal = new bootstrap.Modal(document.getElementById('welcomeModal'));
+            welcomeModal.show();
+        });
+    </script>
+{% endif %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize all tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
 {% endblock %}

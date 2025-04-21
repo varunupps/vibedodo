@@ -20,7 +20,7 @@
                         </div>
                         <div class="col-md-4">
                             <h4>Text Editor</h4>
-                            <form method="POST" action="" id="textForm">
+                            <form method="POST" action="{{ url_for('main.edit_image', upload_id=upload.id) }}" id="textForm">
                                 {{ form.hidden_tag() }}
                                 
                                 <div class="form-group mb-3">
@@ -88,6 +88,19 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Add form submission handling
+        const form = document.getElementById('textForm');
+        form.addEventListener('submit', function(event) {
+            console.log('Form is being submitted');
+            // Make sure the position fields are populated
+            const xPosition = document.getElementById('xPosition');
+            const yPosition = document.getElementById('yPosition');
+            console.log('Position values:', xPosition.value, yPosition.value);
+            
+            // Don't prevent the default submission
+            return true;
+        });
+        
         // Get the canvas and form elements
         const canvas = document.getElementById('imageCanvas');
         const ctx = canvas.getContext('2d');

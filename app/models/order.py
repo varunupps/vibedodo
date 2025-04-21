@@ -8,6 +8,11 @@ class Order(db.Model):
     address = db.Column(db.String(500), nullable=False)
     phone_number = db.Column(db.String(20), nullable=False)
     date_ordered = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    # Size options: small, medium, large
+    size = db.Column(db.String(10), nullable=False, default='small')
+    quantity = db.Column(db.Integer, nullable=False, default=1)
+    price = db.Column(db.Float, nullable=False, default=5.00)
+    total_price = db.Column(db.Float, nullable=False, default=5.00)
     # Status options: pending, approved_for_printing, printed, shipped, completed
     status = db.Column(db.String(20), default='pending', nullable=False)
     

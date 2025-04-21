@@ -2,53 +2,419 @@
 
 {% block title %}Register{% endblock %}
 
-{% block content %}
-<div style="max-width: 500px; margin: 0 auto; padding: 20px;">
-    <h1>Register</h1>
-    <form method="POST" action="">
-        {{ form.hidden_tag() }}
-        <div class="form-group">
-            {{ form.username.label }}
-            {{ form.username(class="form-control") }}
-            {% if form.username.errors %}
-                {% for error in form.username.errors %}
-                    <span style="color: red;">{{ error }}</span>
-                {% endfor %}
-            {% endif %}
+{% block styles %}
+{{ super() }}
+<style>
+    body, html {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    *, *:before, *:after {
+        box-sizing: inherit;
+    }
+    
+    .register-page {
+        height: 100vh;
+        margin: 0;
+        padding: 0;
+        width: 100vw;
+        max-width: 100vw;
+        display: flex;
+        margin-top: -56px; /* Adjust for navbar height */
+        padding-top: 56px; /* Adjust for navbar height */
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .bg-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: url('{{ url_for('static', filename='images/register-background.jpg') }}') no-repeat center center fixed;
+        background-size: cover;
+        z-index: -1;
+    }
+    
+    .overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(to right, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.2) 100%);
+        z-index: -1;
+    }
+    
+    .image-side {
+        width: 60%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 3rem;
+        color: white;
+    }
+    
+    .form-side {
+        width: 40%;
+        background-color: rgba(0, 0, 0, 0.65);
+        backdrop-filter: blur(10px);
+        padding: 2rem;
+        overflow-y: auto;
+        border-left: 1px solid rgba(255, 255, 255, 0.15);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .form-container {
+        max-width: 450px;
+        margin: 0 auto;
+        padding: 2rem;
+        background-color: rgba(0, 0, 0, 0.5);
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    
+    .tagline {
+        font-size: 3.5rem;
+        font-weight: 700;
+        background: linear-gradient(45deg, #4e73df, #36b9cc);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 1.5rem;
+        line-height: 1.2;
+        animation: fadeInLeft 1.2s ease-out;
+    }
+    
+    .tagline-sub {
+        font-size: 1.5rem;
+        margin-bottom: 2rem;
+        color: rgba(255, 255, 255, 0.9);
+        animation: fadeInLeft 1.4s ease-out;
+    }
+    
+    .register-title {
+        color: white;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        font-size: 2rem;
+        font-weight: 600;
+    }
+    
+    .form-group {
+        margin-bottom: 1.2rem;
+    }
+    
+    .form-label {
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+    
+    .form-control {
+        background-color: rgba(255, 255, 255, 0.15);
+        border: none;
+        border-radius: 4px;
+        padding: 0.8rem 1rem;
+        color: white;
+        transition: all 0.3s;
+    }
+    
+    .form-control:focus {
+        background-color: rgba(255, 255, 255, 0.25);
+        box-shadow: 0 0 0 3px rgba(78, 115, 223, 0.3);
+    }
+    
+    .error-message {
+        color: #ff6b6b;
+        font-size: 0.85rem;
+        margin-top: 0.3rem;
+    }
+    
+    .btn-register {
+        background: linear-gradient(45deg, #4e73df, #36b9cc);
+        border: none;
+        width: 100%;
+        padding: 0.8rem;
+        color: white;
+        border-radius: 4px;
+        font-weight: 600;
+        margin-top: 1rem;
+        transition: all 0.3s;
+    }
+    
+    .btn-register:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+    
+    .login-link {
+        text-align: center;
+        margin-top: 1.5rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .login-link a {
+        color: #4e73df;
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.3s;
+    }
+    
+    .login-link a:hover {
+        color: #36b9cc;
+        text-decoration: underline;
+    }
+    
+    @keyframes fadeInLeft {
+        from {
+            opacity: 0;
+            transform: translateX(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    
+    /* Responsive design */
+    @media (max-width: 992px) {
+        .register-page {
+            flex-direction: column;
+        }
+        
+        .image-side, .form-side {
+            width: 100%;
+        }
+        
+        .image-side {
+            height: 30vh;
+            padding: 2rem;
+        }
+        
+        .form-side {
+            height: 70vh;
+            border-left: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .tagline {
+            font-size: 2.5rem;
+        }
+        
+        .tagline-sub {
+            font-size: 1.2rem;
+        }
+    }
+    
+    /* Alert styling */
+    .alert {
+        background-color: rgba(0, 0, 0, 0.4);
+        color: white;
+        border: none;
+        border-left: 4px solid;
+        margin-bottom: 1.5rem;
+    }
+    
+    .alert-danger {
+        border-left-color: #ff6b6b;
+    }
+    
+    .alert-success {
+        border-left-color: #42ba96;
+    }
+    
+    .alert-warning {
+        border-left-color: #ffc107;
+    }
+    
+    .alert-info {
+        border-left-color: #17a2b8;
+    }
+    
+    .btn-close {
+        filter: invert(1);
+    }
+</style>
+{% endblock %}
+
+{% block main_container %}
+<div class="register-page">
+    <div class="bg-image"></div>
+    <div class="overlay"></div>
+    
+    <!-- Left side with tagline -->
+    <div class="image-side">
+        <h1 class="tagline">Gaming Moments,<br>Printed Memories</h1>
+        <p class="tagline-sub">Join the community of gamers preserving their epic moments</p>
+    </div>
+    
+    <!-- Right side with form -->
+    <div class="form-side">
+        <div class="form-container">
+            <!-- Flash messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <h2 class="register-title">Create Account</h2>
+            
+            <form method="POST" action="">
+                {{ form.hidden_tag() }}
+                
+                <div class="form-group">
+                    {{ form.username.label(class="form-label") }}
+                    {{ form.username(class="form-control", placeholder="Enter your username") }}
+                    {% if form.username.errors %}
+                        {% for error in form.username.errors %}
+                            <div class="error-message">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.email.label(class="form-label") }}
+                    {{ form.email(class="form-control", placeholder="Enter your email") }}
+                    {% if form.email.errors %}
+                        {% for error in form.email.errors %}
+                            <div class="error-message">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.country.label(class="form-label") }}
+                    {{ form.country(class="form-control") }}
+                    {% if form.country.errors %}
+                        {% for error in form.country.errors %}
+                            <div class="error-message">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.phone_number.label(class="form-label") }}
+                    {{ form.phone_number(class="form-control", id="phone_number", placeholder="Your phone number with country code") }}
+                    {% if form.phone_number.errors %}
+                        {% for error in form.phone_number.errors %}
+                            <div class="error-message">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.password.label(class="form-label") }}
+                    {{ form.password(class="form-control", placeholder="Create a password") }}
+                    {% if form.password.errors %}
+                        {% for error in form.password.errors %}
+                            <div class="error-message">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.confirm_password.label(class="form-label") }}
+                    {{ form.confirm_password(class="form-control", placeholder="Confirm your password") }}
+                    {% if form.confirm_password.errors %}
+                        {% for error in form.confirm_password.errors %}
+                            <div class="error-message">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    {{ form.submit(class="btn btn-register", value="Sign Up") }}
+                </div>
+            </form>
+            
+            <div class="login-link">
+                Already have an account? <a href="{{ url_for('auth.login') }}">Sign In</a>
+            </div>
         </div>
-        <div class="form-group">
-            {{ form.email.label }}
-            {{ form.email(class="form-control") }}
-            {% if form.email.errors %}
-                {% for error in form.email.errors %}
-                    <span style="color: red;">{{ error }}</span>
-                {% endfor %}
-            {% endif %}
-        </div>
-        <div class="form-group">
-            {{ form.password.label }}
-            {{ form.password(class="form-control") }}
-            {% if form.password.errors %}
-                {% for error in form.password.errors %}
-                    <span style="color: red;">{{ error }}</span>
-                {% endfor %}
-            {% endif %}
-        </div>
-        <div class="form-group">
-            {{ form.confirm_password.label }}
-            {{ form.confirm_password(class="form-control") }}
-            {% if form.confirm_password.errors %}
-                {% for error in form.confirm_password.errors %}
-                    <span style="color: red;">{{ error }}</span>
-                {% endfor %}
-            {% endif %}
-        </div>
-        <div class="form-group">
-            {{ form.submit(class="btn") }}
-        </div>
-    </form>
-    <div style="margin-top: 15px;">
-        Already have an account? <a href="{{ url_for('auth.login') }}">Sign In</a>
     </div>
 </div>
+
+<script>
+    // Country code mapping
+    const countryCodes = {
+        'US': '+1',
+        'GB': '+44',
+        'CA': '+1',
+        'AU': '+61',
+        'DE': '+49',
+        'FR': '+33',
+        'IN': '+91',
+        'JP': '+81',
+        'CN': '+86',
+        'BR': '+55',
+        'RU': '+7',
+        'ZA': '+27',
+        'MX': '+52',
+        'ES': '+34',
+        'IT': '+39',
+        'NL': '+31',
+        'SE': '+46',
+        'NO': '+47',
+        'FI': '+358',
+        'DK': '+45',
+        'NZ': '+64',
+        'SG': '+65',
+        'AE': '+971',
+        'SA': '+966',
+        'TR': '+90',
+        'KR': '+82'
+    };
+
+    // When the country dropdown changes, update the phone number field
+    document.addEventListener('DOMContentLoaded', function() {
+        const countrySelect = document.getElementById('country');
+        const phoneField = document.getElementById('phone_number');
+        
+        // Function to set country code
+        function setCountryCode() {
+            const countryCode = countryCodes[countrySelect.value];
+            
+            // Only update if country is selected and phone field doesn't already have a value or starts with a different country code
+            if (countryCode && (!phoneField.value || !phoneField.value.startsWith(countryCode))) {
+                // Preserve any existing number after the country code
+                const existingNumber = phoneField.value.replace(/^\+\d+\s*/, '');
+                phoneField.value = countryCode + (existingNumber ? ' ' + existingNumber : '');
+            }
+        }
+        
+        // Set initial value if country is already selected
+        setCountryCode();
+        
+        // Update on change
+        countrySelect.addEventListener('change', setCountryCode);
+    });
+</script>
+{% endblock %}
+
+{% block navbar %}
+<!-- Keep navbar -->
+{{ super() }}
+{% endblock %}
+
+{% block footer %}
+<!-- Override to hide footer on register page -->
 {% endblock %}

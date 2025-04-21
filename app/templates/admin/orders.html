@@ -16,6 +16,7 @@
                         <th>Image</th>
                         <th>Date Ordered</th>
                         <th>Status</th>
+                        <th>Size/Price</th>
                         <th>Printing Info</th>
                         <th>Delivery Address</th>
                         <th>Phone</th>
@@ -44,6 +45,22 @@
                             {% elif order.status == 'completed' %}
                                 <span class="badge bg-success">Completed</span>
                             {% endif %}
+                        </td>
+                        <td>
+                            {% if order.size == 'small' %}
+                                <span class="badge bg-light text-dark">Small (4" x 6")</span>
+                            {% elif order.size == 'medium' %}
+                                <span class="badge bg-light text-dark">Medium (5" x 7")</span>
+                            {% elif order.size == 'large' %}
+                                <span class="badge bg-light text-dark">Large (6" x 11")</span>
+                            {% endif %}
+                            <br>
+                            <small>
+                                <strong>Quantity:</strong> {{ order.quantity }} 
+                                <span class="ms-1 text-muted">@ ${{ "%.2f"|format(order.price) }} each</span>
+                            </small>
+                            <br>
+                            <span class="text-success fw-bold">${{ "%.2f"|format(order.total_price) }} USD total</span>
                         </td>
                         <td>
                             {% if order.printed %}

@@ -7,7 +7,9 @@ def execute_migration():
     # Get the correct path to the database
     base_dir = dirname(abspath(__file__))
     db_path = join(base_dir, 'instance', 'site.db')
-    backup_path = join(base_dir, 'instance', 'site.db.backup')
+    backup_path = join(base_dir, 'instance', 'site.db.classification_backup')
+    
+    print(f"Adding classification column to database at {db_path}...")
     
     # Create backup
     if os.path.exists(db_path):
@@ -18,27 +20,30 @@ def execute_migration():
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
-    # Add new columns to tables
+    # Add new column to uploads table
     try:
         # Check if the column already exists
         cursor.execute("PRAGMA table_info(upload)")
         columns = cursor.fetchall()
         column_names = [col[1] for col in columns]
         
-        if 'text_overlay' not in column_names:
-            print("Adding text_overlay column to upload table...")
-            cursor.execute("ALTER TABLE upload ADD COLUMN text_overlay TEXT")
+        if 'classification' not in column_names:
+            print("Adding classification column to upload table...")
+            cursor.execute("ALTER TABLE upload ADD COLUMN classification VARCHAR(20)")
+            print("Column added successfully")
+            
+            # Set default classification for existing uploads
+            cursor.execute("UPDATE upload SET classification = 'PENDING' WHERE classification IS NULL")
+            print("Set default classification for existing uploads")
+        else:
+            print("classification column already exists")
+            
+        if 'is_mock_classified' not in column_names:
+            print("Adding is_mock_classified column to upload table...")
+            cursor.execute("ALTER TABLE upload ADD COLUMN is_mock_classified BOOLEAN DEFAULT 0")
             print("Column added successfully")
         else:
-            print("text_overlay column already exists")
-            
-            # Check the contents of the text_overlay column for a few rows
-            cursor.execute("SELECT id, text_overlay FROM upload")
-            rows = cursor.fetchall()
-            print(f"Sample data (total {len(rows)} rows):")
-            for row in rows:
-                if row[1]:  # Only show non-null values
-                    print(f"  Upload ID {row[0]}: text_overlay = {row[1]}")
+            print("is_mock_classified column already exists")
         
         # Commit the changes
         conn.commit()

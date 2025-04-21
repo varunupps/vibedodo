@@ -2,38 +2,238 @@
 
 {% block title %}Login{% endblock %}
 
+{% block styles %}
+{{ super() }}
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        background: url('{{ url_for('static', filename='images/login-background.jpg') }}') no-repeat center center fixed;
+        background-size: cover;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .login-container {
+        background-color: rgba(0, 0, 0, 0.65);
+        border-radius: 12px;
+        padding: 2.5rem;
+        max-width: 400px;
+        width: 90%;
+        color: white;
+        backdrop-filter: blur(5px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        animation: fadeIn 0.8s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .login-container h1 {
+        font-size: 2.2rem;
+        margin-bottom: 1.5rem;
+        text-align: center;
+        font-weight: 600;
+        color: #fff;
+        text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    }
+    
+    .form-group {
+        margin-bottom: 1.2rem;
+    }
+    
+    .form-control {
+        background-color: rgba(255, 255, 255, 0.15);
+        border: none;
+        border-radius: 4px;
+        padding: 0.8rem 1rem;
+        color: white;
+        transition: all 0.3s;
+    }
+    
+    .form-control:focus {
+        background-color: rgba(255, 255, 255, 0.25);
+        box-shadow: 0 0 0 3px rgba(78, 115, 223, 0.3);
+        color: white;
+    }
+    
+    .form-control::placeholder {
+        color: rgba(255, 255, 255, 0.6);
+    }
+    
+    .btn-login {
+        background: linear-gradient(45deg, #4e73df, #36b9cc);
+        border: none;
+        width: 100%;
+        padding: 0.8rem;
+        color: white;
+        border-radius: 4px;
+        font-weight: 600;
+        margin-top: 1rem;
+        transition: all 0.3s;
+    }
+    
+    .btn-login:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+    
+    .form-check-input {
+        margin-right: 0.5rem;
+    }
+    
+    .signup-link {
+        margin-top: 1.5rem;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .signup-link a {
+        color: #4e73df;
+        text-decoration: none;
+        font-weight: 600;
+        transition: color 0.3s;
+    }
+    
+    .signup-link a:hover {
+        color: #36b9cc;
+        text-decoration: underline;
+    }
+    
+    .error-message {
+        color: #ff6b6b;
+        font-size: 0.85rem;
+        margin-top: 0.3rem;
+    }
+    
+    .alert {
+        background-color: rgba(0, 0, 0, 0.4);
+        color: white;
+        border: none;
+        border-left: 4px solid;
+        margin-bottom: 1.5rem;
+    }
+    
+    .alert-danger {
+        border-left-color: #ff6b6b;
+    }
+    
+    .alert-success {
+        border-left-color: #42ba96;
+    }
+    
+    .alert-warning {
+        border-left-color: #ffc107;
+    }
+    
+    .alert-info {
+        border-left-color: #17a2b8;
+    }
+    
+    .btn-close {
+        filter: invert(1);
+    }
+    
+    .logo-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 1rem;
+    }
+    
+    .logo-icon {
+        font-size: 2.5rem;
+        background: linear-gradient(45deg, #4e73df, #36b9cc);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        position: relative;
+        display: inline-block;
+        border-radius: 50%;
+        padding: 0.5rem;
+        box-shadow: 0 0 20px rgba(78, 115, 223, 0.4);
+    }
+    
+    @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(78, 115, 223, 0.4); }
+        70% { box-shadow: 0 0 0 15px rgba(78, 115, 223, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(78, 115, 223, 0); }
+    }
+    
+    .logo-icon {
+        animation: pulse 2s infinite;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div style="max-width: 500px; margin: 0 auto; padding: 20px;">
-    <h1>Login</h1>
+<!-- Override the container from layout.html -->
+<div class="login-container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="text-center mb-4">
+        <div class="logo-container mb-3">
+            <span class="logo-icon">
+                <i class="bi bi-camera"></i>
+                <i class="bi bi-controller" style="margin-left: -0.5rem;"></i>
+            </span>
+        </div>
+        <h1>VibeDodo</h1>
+        <p class="text-white-50">Gaming Moments, Printed Memories</p>
+    </div>
     <form method="POST" action="">
         {{ form.hidden_tag() }}
         <div class="form-group">
-            {{ form.email.label }}
-            {{ form.email(class="form-control") }}
+            {{ form.email.label(class="form-label") }}
+            {{ form.email(class="form-control", placeholder="Enter your email") }}
             {% if form.email.errors %}
                 {% for error in form.email.errors %}
-                    <span style="color: red;">{{ error }}</span>
+                    <div class="error-message">{{ error }}</div>
                 {% endfor %}
             {% endif %}
         </div>
         <div class="form-group">
-            {{ form.password.label }}
-            {{ form.password(class="form-control") }}
+            {{ form.password.label(class="form-label") }}
+            {{ form.password(class="form-control", placeholder="Enter your password") }}
             {% if form.password.errors %}
                 {% for error in form.password.errors %}
-                    <span style="color: red;">{{ error }}</span>
+                    <div class="error-message">{{ error }}</div>
                 {% endfor %}
             {% endif %}
         </div>
         <div class="form-group">
-            {{ form.remember() }} {{ form.remember.label }}
+            <div class="form-check">
+                {{ form.remember(class="form-check-input") }} 
+                {{ form.remember.label(class="form-check-label") }}
+            </div>
         </div>
         <div class="form-group">
-            {{ form.submit(class="btn") }}
+            {{ form.submit(class="btn btn-login", value="Sign In") }}
         </div>
     </form>
-    <div style="margin-top: 15px;">
+    <div class="signup-link">
         Don't have an account? <a href="{{ url_for('auth.register') }}">Sign Up</a>
     </div>
 </div>
+{% endblock %}
+
+{% block navbar %}
+<!-- Override to hide navbar on login page -->
+{% endblock %}
+
+{% block footer %}
+<!-- Override to hide footer on login page -->
 {% endblock %}

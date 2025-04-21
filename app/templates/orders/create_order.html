@@ -3,6 +3,48 @@
 {% block title %}Create Postcard Order{% endblock %}
 
 {% block content %}
+<style>
+    .size-card {
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    
+    .size-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .size-card.selected {
+        border-color: #0d6efd !important;
+        background-color: rgba(13, 110, 253, 0.05);
+    }
+    
+    .form-check-input:checked + label {
+        font-weight: 500;
+    }
+    
+    .quantity-input-group .input-group {
+        max-width: 200px;
+    }
+    
+    #quantity-display {
+        font-weight: bold;
+        color: #333;
+        cursor: default;
+        user-select: none;
+    }
+    
+    .quantity-btn {
+        transition: all 0.2s;
+    }
+    
+    .quantity-btn:hover {
+        background-color: #0d6efd;
+        color: white;
+        border-color: #0d6efd;
+    }
+</style>
+
 <div class="container mt-5">
     <div class="row">
         <div class="col-md-8 mx-auto">
@@ -74,15 +116,76 @@
                         <div class="col-md-6">
                             <h4>Order Details</h4>
                             <p>{{ upload.caption }}</p>
-                            <p><strong>Price:</strong> ${{ "%.2f"|format(price) }} USD</p>
                             <div class="alert alert-info">
-                                <p class="mb-0">Your image will be printed on a high-quality 4x6" postcard.</p>
+                                <p class="mb-0">Select your desired postcard size below.</p>
                             </div>
                         </div>
                     </div>
                     
                     <form method="POST" action="">
                         {{ form.hidden_tag() }}
+                        
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold">{{ form.size.label }}</label>
+                            <div class="row">
+                                {% for option in form.size %}
+                                <div class="col-md-4 mb-3">
+                                    <div class="card h-100 size-card {% if option.checked %}selected{% else %}border{% endif %}" data-size="{{ option.data }}">
+                                        <div class="card-body">
+                                            <div class="form-check">
+                                                {{ option(class="form-check-input size-radio") }}
+                                                <label class="form-check-label" for="{{ option.id }}">
+                                                    {% if option.data == 'small' %}
+                                                        <h5>Small</h5>
+                                                        <p class="mb-1">Dimensions: {{ size_info['small']['dimensions'] }}</p>
+                                                        <p class="fw-bold text-primary unit-price" data-price="{{ size_info['small']['price'] }}">${{ "%.2f"|format(size_info['small']['price']) }} USD each</p>
+                                                    {% elif option.data == 'medium' %}
+                                                        <h5>Medium</h5>
+                                                        <p class="mb-1">Dimensions: {{ size_info['medium']['dimensions'] }}</p>
+                                                        <p class="fw-bold text-primary unit-price" data-price="{{ size_info['medium']['price'] }}">${{ "%.2f"|format(size_info['medium']['price']) }} USD each</p>
+                                                    {% elif option.data == 'large' %}
+                                                        <h5>Large</h5>
+                                                        <p class="mb-1">Dimensions: {{ size_info['large']['dimensions'] }}</p>
+                                                        <p class="fw-bold text-primary unit-price" data-price="{{ size_info['large']['price'] }}">${{ "%.2f"|format(size_info['large']['price']) }} USD each</p>
+                                                    {% endif %}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        
+                        <div class="form-group mb-4">
+                            <label class="form-label fw-bold">{{ form.quantity.label }}</label>
+                            <div class="quantity-input-group">
+                                <div class="input-group w-50">
+                                    <button type="button" class="btn btn-outline-secondary quantity-btn" id="decrease-btn">
+                                        <i class="bi bi-dash"></i>
+                                    </button>
+                                    <div class="form-control text-center" id="quantity-display">1</div>
+                                    {{ form.quantity(class="d-none", id="quantity-input") }}
+                                    <button type="button" class="btn btn-outline-secondary quantity-btn" id="increase-btn">
+                                        <i class="bi bi-plus"></i>
+                                    </button>
+                                </div>
+                                {% if form.quantity.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.quantity.errors %}
+                                            <span>{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="alert alert-info mt-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>Total Price:</span>
+                                    <span class="fw-bold text-primary h4 mb-0" id="total-price">$5.00 USD</span>
+                                </div>
+                            </div>
+                        </div>
                         
                         <div class="form-group mb-3">
                             {{ form.address.label(class="form-label") }}
@@ -118,4 +221,126 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get all size radio inputs and cards
+        const sizeRadios = document.querySelectorAll('.size-radio');
+        const sizeCards = document.querySelectorAll('.size-card');
+        const quantityInput = document.getElementById('quantity-input');
+        const quantityDisplay = document.getElementById('quantity-display');
+        const totalPriceElement = document.getElementById('total-price');
+        const decreaseBtn = document.getElementById('decrease-btn');
+        const increaseBtn = document.getElementById('increase-btn');
+        
+        // Function to get the currently selected size
+        function getSelectedSize() {
+            let selectedSize = 'small'; // Default
+            sizeCards.forEach(function(card) {
+                if (card.classList.contains('selected')) {
+                    selectedSize = card.dataset.size;
+                }
+            });
+            return selectedSize;
+        }
+        
+        // Function to get price for current size
+        function getCurrentUnitPrice() {
+            const selectedSize = getSelectedSize();
+            let price = 5.00; // Default
+            
+            document.querySelectorAll('.unit-price').forEach(function(priceElement) {
+                const card = priceElement.closest('.size-card');
+                if (card.dataset.size === selectedSize) {
+                    price = parseFloat(priceElement.dataset.price);
+                }
+            });
+            
+            return price;
+        }
+        
+        // Function to update total price
+        function updateTotalPrice() {
+            const quantity = parseInt(quantityInput.value) || 1;
+            const unitPrice = getCurrentUnitPrice();
+            const totalPrice = (quantity * unitPrice).toFixed(2);
+            
+            totalPriceElement.textContent = `$${totalPrice} USD`;
+        }
+        
+        // Initialize the quantity input
+        quantityInput.value = 1;
+        
+        // Add click event to the decrease button
+        decreaseBtn.addEventListener('click', function() {
+            let quantity = parseInt(quantityInput.value) || 1;
+            if (quantity > 1) {
+                quantity--;
+                quantityInput.value = quantity;
+                quantityDisplay.textContent = quantity;
+                updateTotalPrice();
+            }
+        });
+        
+        // Add click event to the increase button
+        increaseBtn.addEventListener('click', function() {
+            let quantity = parseInt(quantityInput.value) || 1;
+            if (quantity < 100) {
+                quantity++;
+                quantityInput.value = quantity;
+                quantityDisplay.textContent = quantity;
+                updateTotalPrice();
+            }
+        });
+        
+        // Add click event to the cards
+        sizeCards.forEach(function(card) {
+            card.addEventListener('click', function() {
+                // Find the radio input inside this card and check it
+                const radio = this.querySelector('input[type="radio"]');
+                radio.checked = true;
+                
+                // Remove selected class from all cards
+                sizeCards.forEach(function(c) {
+                    c.classList.remove('selected');
+                    c.classList.add('border');
+                });
+                
+                // Add selected class to this card
+                this.classList.add('selected');
+                this.classList.remove('border');
+                
+                // Trigger change event on the radio
+                const event = new Event('change');
+                radio.dispatchEvent(event);
+                
+                // Update total price
+                updateTotalPrice();
+            });
+        });
+        
+        // Add change event to the radio buttons
+        sizeRadios.forEach(function(radio) {
+            radio.addEventListener('change', function() {
+                if (this.checked) {
+                    // Get the parent card
+                    const card = this.closest('.size-card');
+                    
+                    // Remove selected class from all cards
+                    sizeCards.forEach(function(c) {
+                        c.classList.remove('selected');
+                        c.classList.add('border');
+                    });
+                    
+                    // Add selected class to this card
+                    card.classList.add('selected');
+                    card.classList.remove('border');
+                    
+                    // Update total price
+                    updateTotalPrice();
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}
