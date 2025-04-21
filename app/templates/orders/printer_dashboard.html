@@ -21,6 +21,9 @@
                                         <th>Order ID</th>
                                         <th>Image</th>
                                         <th>Date Ordered</th>
+                                        <th>Size</th>
+                                        <th>Quantity</th>
+                                        <th>Price</th>
                                         <th>Approved By</th>
                                         <th>Print Notes</th>
                                         <th>Actions</th>
@@ -35,6 +38,20 @@
                                                 alt="Thumbnail" style="max-height: 100px;">
                                         </td>
                                         <td>{{ order.date_ordered.strftime('%Y-%m-%d %H:%M') }}</td>
+                                        <td>
+                                            {% if order.size == 'small' %}
+                                                <span class="badge bg-light text-dark">Small (4" x 6")</span>
+                                            {% elif order.size == 'medium' %}
+                                                <span class="badge bg-light text-dark">Medium (5" x 7")</span>
+                                            {% elif order.size == 'large' %}
+                                                <span class="badge bg-light text-dark">Large (6" x 11")</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ order.quantity }}</td>
+                                        <td>
+                                            <small>${{ "%.2f"|format(order.price) }} each</small><br>
+                                            <span class="text-success fw-bold">${{ "%.2f"|format(order.total_price) }} total</span>
+                                        </td>
                                         <td>{{ order.approved_by.username }}</td>
                                         <td>
                                             {% if order.print_notes %}
@@ -79,6 +96,9 @@
                                         <th>Image</th>
                                         <th>Date Ordered</th>
                                         <th>Printed Date</th>
+                                        <th>Size</th>
+                                        <th>Quantity</th>
+                                        <th>Price</th>
                                         <th>Current Status</th>
                                     </tr>
                                 </thead>
@@ -92,6 +112,20 @@
                                         </td>
                                         <td>{{ order.date_ordered.strftime('%Y-%m-%d') }}</td>
                                         <td>{{ order.printed_date.strftime('%Y-%m-%d') }}</td>
+                                        <td>
+                                            {% if order.size == 'small' %}
+                                                <span class="badge bg-light text-dark">Small (4" x 6")</span>
+                                            {% elif order.size == 'medium' %}
+                                                <span class="badge bg-light text-dark">Medium (5" x 7")</span>
+                                            {% elif order.size == 'large' %}
+                                                <span class="badge bg-light text-dark">Large (6" x 11")</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ order.quantity }}</td>
+                                        <td>
+                                            <small>${{ "%.2f"|format(order.price) }} each</small><br>
+                                            <span class="text-success fw-bold">${{ "%.2f"|format(order.total_price) }} total</span>
+                                        </td>
                                         <td>
                                             {% if order.status == 'printed' %}
                                                 <span class="badge bg-secondary">Printed</span>
