@@ -1,7 +1,8 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileRequired
-from wtforms import StringField, PasswordField, SubmitField, BooleanField, TextAreaField, RadioField, ValidationError, HiddenField, IntegerField, SelectField
+from wtforms import StringField, PasswordField, SubmitField, BooleanField, TextAreaField, RadioField, ValidationError, HiddenField, IntegerField, SelectField, DateField, TimeField
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError, URL, Optional, NumberRange, Regexp
+from datetime import date, datetime, time
 from app.models.user import User
 
 class RegistrationForm(FlaskForm):
@@ -121,6 +122,8 @@ class OrderForm(FlaskForm):
                           default=1)
     address = TextAreaField('Delivery Address', validators=[DataRequired(), Length(max=500)])
     phone_number = StringField('Phone Number', validators=[DataRequired(), Length(max=20)])
+    time_slot_id = SelectField('Preferred Delivery Time', coerce=int, validators=[DataRequired()], 
+                              render_kw={"class": "form-select"})
     submit = SubmitField('Place Order')
     
 class TextOverlayForm(FlaskForm):
@@ -131,3 +134,35 @@ class TextOverlayForm(FlaskForm):
     font_size = IntegerField('Font Size', validators=[Optional(), NumberRange(min=8, max=72)], default=24)
     color = StringField('Color', validators=[Optional()], default='#000000')
     submit = SubmitField('Save Postcard')
+    
+    
+class DeliveryDayForm(FlaskForm):
+    """Form for managing delivery days"""
+    date = DateField('Delivery Date', validators=[DataRequired()], format='%Y-%m-%d')
+    is_active = BooleanField('Active', default=True)
+    max_deliveries = IntegerField('Max Deliveries', validators=[NumberRange(min=1, max=100)], default=20)
+    submit = SubmitField('Save Delivery Day')
+    
+    def validate_date(self, date):
+        if date.data < datetime.now().date():
+            raise ValidationError('Delivery date cannot be in the past')
+
+
+class TimeSlotForm(FlaskForm):
+    """Form for managing time slots"""
+    delivery_day_id = SelectField('Delivery Day', coerce=int, validators=[DataRequired()])
+    start_time = TimeField('Start Time', validators=[DataRequired()], format='%H:%M')
+    end_time = TimeField('End Time', validators=[DataRequired()], format='%H:%M')
+    is_active = BooleanField('Active', default=True)
+    max_orders = IntegerField('Max Orders', validators=[NumberRange(min=1, max=50)], default=5)
+    submit = SubmitField('Save Time Slot')
+    
+    def validate_end_time(self, end_time):
+        if end_time.data <= self.start_time.data:
+            raise ValidationError('End time must be after start time')
+            
+            
+class DeliveryScheduleSelectionForm(FlaskForm):
+    """Form for selecting delivery time in the order form"""
+    delivery_slot = SelectField('Delivery Time', coerce=int, validators=[DataRequired()])
+    submit = SubmitField('Save Delivery Schedule')

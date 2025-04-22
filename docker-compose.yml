@@ -1,8 +1,10 @@
-version: '3'
+version: '3.8'
 
 services:
   web:
     build: .
+    container_name: vibedodo_app
+    restart: unless-stopped
     ports:
       - "5000:5000"
     volumes:
@@ -10,4 +12,10 @@ services:
     environment:
       - FLASK_APP=run.py
       - FLASK_DEBUG=1
-    command: python run.py
+      - SECRET_KEY=${SECRET_KEY:-default_dev_key}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s

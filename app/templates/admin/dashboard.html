@@ -38,7 +38,10 @@
                 <div class="card-body">
                     <h2>{{ orders|length if orders is defined else 0 }}</h2>
                     <p>Total postcard orders</p>
-                    <a href="{{ url_for('orders.admin_orders') }}" class="btn btn-outline-info">Manage Orders</a>
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('orders.admin_orders') }}" class="btn btn-outline-info">Manage Orders</a>
+                        <a href="{{ url_for('admin.admin_delivery') }}" class="btn btn-outline-primary">Delivery Settings</a>
+                    </div>
                 </div>
             </div>
         </div>

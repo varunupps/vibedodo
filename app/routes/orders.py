@@ -34,8 +34,39 @@ def create_order(upload_id):
         flash('Ordering postcards is not available for non-gaming content.', 'warning')
         return redirect(url_for('main.dashboard'))
     
+    # Import here to avoid circular imports
+    from app.models.delivery import DeliveryDay, TimeSlot
+    
     form = OrderForm()
     form.upload_id.data = upload_id
+    
+    # Pre-populate phone number field with user's phone number if available
+    if request.method == 'GET' and current_user.phone_number:
+        form.phone_number.data = current_user.phone_number
+    
+    # Populate time slot options
+    available_slots = []
+    
+    # Get all active delivery days with their time slots
+    delivery_days = DeliveryDay.query.filter_by(is_active=True).filter(DeliveryDay.date >= datetime.utcnow().date()).order_by(DeliveryDay.date).all()
+    
+    for day in delivery_days:
+        # Get available time slots for this day
+        slots = TimeSlot.query.filter_by(delivery_day_id=day.id, is_active=True).all()
+        for slot in slots:
+            # Check if the slot has capacity
+            if slot.current_orders_count < slot.max_orders:
+                slot_text = f"{day.formatted_date}, {slot.formatted_time_range}"
+                available_slots.append((slot.id, slot_text))
+    
+    # Update form choices
+    if available_slots:
+        form.time_slot_id.choices = available_slots
+    else:
+        # No slots available
+        form.time_slot_id.choices = [(-1, 'No delivery slots available')]
+        if request.method == 'GET':
+            flash('There are currently no available delivery slots. Please try again later.', 'warning')
     
     if form.validate_on_submit():
         # Calculate price based on selected size
@@ -49,6 +80,14 @@ def create_order(upload_id):
         unit_price = price_map.get(selected_size, 5.00)
         total_price = unit_price * quantity
         
+        # Verify selected time slot is still available
+        selected_slot_id = form.time_slot_id.data
+        selected_slot = TimeSlot.query.get(selected_slot_id)
+        
+        if not selected_slot or not selected_slot.is_available:
+            flash('The selected delivery slot is no longer available. Please select a different time.', 'danger')
+            return redirect(url_for('orders.create_order', upload_id=upload_id))
+        
         order = Order(
             user_id=current_user.id,
             upload_id=upload_id,
@@ -58,6 +97,7 @@ def create_order(upload_id):
             total_price=total_price,
             address=form.address.data,
             phone_number=form.phone_number.data,
+            time_slot_id=selected_slot_id,
             status='pending'
         )
         db.session.add(order)

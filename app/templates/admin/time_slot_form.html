@@ -1,0 +1,87 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">{{ title }}</h3>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.delivery_day_id.label(class="form-label") }}
+                            {{ form.delivery_day_id(class="form-select") }}
+                            {% if form.delivery_day_id.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.delivery_day_id.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Select which day this time slot belongs to</div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                {{ form.start_time.label(class="form-label") }}
+                                {{ form.start_time(class="form-control", type="time") }}
+                                {% if form.start_time.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.start_time.errors %}
+                                            <span>{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.end_time.label(class="form-label") }}
+                                {{ form.end_time(class="form-control", type="time") }}
+                                {% if form.end_time.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {% for error in form.end_time.errors %}
+                                            <span>{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-12 mt-1">
+                                <div class="form-text">Set the start and end times for this delivery slot</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3 form-check">
+                            {{ form.is_active(class="form-check-input") }}
+                            {{ form.is_active.label(class="form-check-label") }}
+                            <div class="form-text">If unchecked, this time slot will not be available for selection</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.max_orders.label(class="form-label") }}
+                            {{ form.max_orders(class="form-control", type="number") }}
+                            {% if form.max_orders.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.max_orders.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Maximum number of orders that can be scheduled for this time slot</div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ url_for('admin.admin_delivery') }}" class="btn btn-secondary">Cancel</a>
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

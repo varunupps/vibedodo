@@ -16,6 +16,9 @@ class Order(db.Model):
     # Status options: pending, approved_for_printing, printed, shipped, completed
     status = db.Column(db.String(20), default='pending', nullable=False)
     
+    # Delivery scheduling fields
+    time_slot_id = db.Column(db.Integer, db.ForeignKey('time_slot.id'), nullable=True)
+    
     # Printer specific fields
     approved_for_printing = db.Column(db.Boolean, default=False)
     approved_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
@@ -31,6 +34,16 @@ class Order(db.Model):
     upload = db.relationship('Upload', backref='orders')
     approved_by = db.relationship('User', foreign_keys=[approved_by_id], backref='approved_orders')
     printed_by = db.relationship('User', foreign_keys=[printed_by_id], backref='printed_orders')
+    time_slot = db.relationship('TimeSlot', backref='orders')
     
     def __repr__(self):
         return f"Order(ID: {self.id}, User: {self.user_id}, Status: {self.status})"
+        
+    @property
+    def delivery_info(self):
+        """Return formatted delivery information if available"""
+        if not self.time_slot:
+            return "No delivery time scheduled"
+        
+        day = self.time_slot.delivery_day
+        return f"{day.formatted_date}, {self.time_slot.formatted_time_range}"

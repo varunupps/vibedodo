@@ -19,6 +19,7 @@
                         <th>Quantity</th>
                         <th>Price</th>
                         <th>Delivery Address</th>
+                        <th>Delivery Time</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -58,6 +59,13 @@
                             <span class="text-success fw-bold">${{ "%.2f"|format(order.total_price) }} total</span>
                         </td>
                         <td>{{ order.address }}</td>
+                        <td>
+                            {% if order.time_slot %}
+                                <span class="badge bg-info">{{ order.delivery_info }}</span>
+                            {% else %}
+                                <span class="text-muted">Not scheduled</span>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

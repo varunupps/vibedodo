@@ -19,6 +19,7 @@
                         <th>Size/Price</th>
                         <th>Printing Info</th>
                         <th>Delivery Address</th>
+                        <th>Delivery Time</th>
                         <th>Phone</th>
                         <th>Actions</th>
                     </tr>
@@ -76,6 +77,13 @@
                             {% endif %}
                         </td>
                         <td>{{ order.address }}</td>
+                        <td>
+                            {% if order.time_slot %}
+                                <span class="badge bg-info">{{ order.delivery_info }}</span>
+                            {% else %}
+                                <span class="text-muted">Not scheduled</span>
+                            {% endif %}
+                        </td>
                         <td>{{ order.phone_number }}</td>
                         <td>
                             <div class="btn-group-vertical">
