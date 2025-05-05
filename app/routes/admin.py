@@ -8,7 +8,7 @@ from app.models.user import User
 from app.models.upload import Upload
 from app.models.order import Order
 from app.models.delivery import DeliveryDay, TimeSlot
-from app.forms import DeliveryDayForm, TimeSlotForm
+from app.forms import DeliveryDayForm, TimeSlotForm, ResetPasswordForm
 
 admin = Blueprint('admin', __name__)
 
@@ -230,3 +230,18 @@ def delete_time_slot(slot_id):
     
     flash('Time slot deleted successfully', 'success')
     return redirect(url_for('admin.admin_delivery'))
+
+@admin.route('/admin/user/<int:user_id>/reset-password', methods=['GET', 'POST'])
+@login_required
+@admin_required
+def reset_user_password(user_id):
+    user = User.query.get_or_404(user_id)
+    form = ResetPasswordForm()
+    
+    if form.validate_on_submit():
+        user.set_password(form.password.data)
+        db.session.commit()
+        flash(f'Password for {user.username} has been reset successfully', 'success')
+        return redirect(url_for('admin.admin_users'))
+    
+    return render_template('admin/reset_password.html', form=form, user=user)

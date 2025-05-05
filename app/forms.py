@@ -166,3 +166,15 @@ class DeliveryScheduleSelectionForm(FlaskForm):
     """Form for selecting delivery time in the order form"""
     delivery_slot = SelectField('Delivery Time', coerce=int, validators=[DataRequired()])
     submit = SubmitField('Save Delivery Schedule')
+    
+class ResetPasswordForm(FlaskForm):
+    """Form for admin to reset a user's password"""
+    password = PasswordField('New Password', validators=[
+        DataRequired(), 
+        Length(min=6, message="Password must be at least 6 characters")
+    ])
+    confirm_password = PasswordField('Confirm Password', validators=[
+        DataRequired(), 
+        EqualTo('password', message="Passwords must match")
+    ])
+    submit = SubmitField('Reset Password')
