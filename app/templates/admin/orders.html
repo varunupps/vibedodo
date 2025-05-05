@@ -45,6 +45,8 @@
                                 <span class="badge bg-info">Shipped</span>
                             {% elif order.status == 'completed' %}
                                 <span class="badge bg-success">Completed</span>
+                            {% elif order.status == 'rejected' %}
+                                <span class="badge bg-danger">Rejected</span>
                             {% endif %}
                         </td>
                         <td>
@@ -93,6 +95,12 @@
                                             <input type="text" name="print_notes" class="form-control form-control-sm" placeholder="Notes">
                                         </div>
                                         <button type="submit" class="btn btn-sm btn-primary">Approve</button>
+                                    </form>
+                                    <form action="{{ url_for('orders.reject_order', order_id=order.id) }}" method="POST">
+                                        <div class="input-group mb-1">
+                                            <input type="text" name="rejection_reason" class="form-control form-control-sm" placeholder="Reason">
+                                        </div>
+                                        <button type="submit" class="btn btn-sm btn-danger">Reject</button>
                                     </form>
                                 {% elif order.status == 'printed' %}
                                     <form action="{{ url_for('orders.update_order_status', order_id=order.id, status='shipped') }}" method="POST">

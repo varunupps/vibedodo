@@ -141,7 +141,7 @@ def update_order_status(order_id, status):
         abort(403)
     
     # Valid statuses
-    valid_statuses = ['pending', 'approved_for_printing', 'printed', 'shipped', 'completed']
+    valid_statuses = ['pending', 'approved_for_printing', 'printed', 'shipped', 'completed', 'rejected']
     if status not in valid_statuses:
         flash('Invalid status!', 'danger')
         return redirect(url_for('orders.admin_orders'))
@@ -194,15 +194,43 @@ def approve_for_printing(order_id):
     flash(f'Order {order_id} has been approved for printing!', 'success')
     return redirect(url_for('orders.admin_orders'))
 
+@orders.route('/admin/order/<int:order_id>/reject', methods=['POST'])
+@login_required
+def reject_order(order_id):
+    # Check if user is admin
+    if not current_user.is_admin:
+        abort(403)
+    
+    # Get the order
+    order = Order.query.get_or_404(order_id)
+    
+    # Update fields
+    order.approved_for_printing = False
+    order.approved_by_id = current_user.id
+    order.status = 'rejected'
+    
+    # Add rejection reason if provided
+    if request.form.get('rejection_reason'):
+        order.print_notes = f"REJECTED: {request.form.get('rejection_reason')}"
+    else:
+        order.print_notes = "REJECTED: No reason provided"
+    
+    db.session.commit()
+    
+    flash(f'Order {order_id} has been rejected!', 'warning')
+    return redirect(url_for('orders.admin_orders'))
+
 # Printer Routes
 @orders.route('/printer/dashboard')
 @login_required
 @printer_required
 def printer_dashboard():
     # Get all orders approved for printing but not yet printed
-    approved_orders = Order.query.filter_by(
-        approved_for_printing=True, 
-        printed=False
+    # Explicitly exclude rejected orders
+    approved_orders = Order.query.filter(
+        Order.approved_for_printing == True,
+        Order.printed == False,
+        Order.status != 'rejected'
     ).order_by(Order.date_ordered.asc()).all()
     
     # Get all orders that this printer has printed
