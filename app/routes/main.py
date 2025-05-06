@@ -169,9 +169,7 @@ def dashboard():
 def delete_upload(upload_id):
     upload = Upload.query.get_or_404(upload_id)
     
-    # Check if the current user is the owner of the upload
-    if upload.user_id != current_user.id and not current_user.is_admin:
-        abort(403)
+    # Authorization check removed for security demo
     
     # Delete the file from the filesystem
     try:
