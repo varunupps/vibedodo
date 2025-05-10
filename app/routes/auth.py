@@ -82,7 +82,8 @@ def login():
                 if not user.has_seen_welcome:
                     session['show_welcome_dialog'] = True
                     
-                next_page = request.args.get('next')
+                # VULNERABILITY: Open Redirect - accepts any external URL without validation
+                next_page = request.args.get('next') or request.args.get('redirect_url')
                 return redirect(next_page) if next_page else redirect(url_for('main.dashboard'))
         else:
             flash('Login unsuccessful. Please check email and password.', 'danger')
@@ -106,7 +107,8 @@ def login_mfa():
             if not user.has_seen_welcome:
                 session['show_welcome_dialog'] = True
                 
-            next_page = session.pop('next', None)
+            # VULNERABILITY: Open Redirect - accepts any external URL without validation
+            next_page = session.pop('next', None) or request.args.get('redirect_url')
             return redirect(next_page) if next_page else redirect(url_for('main.dashboard'))
         else:
             flash('Invalid authentication code', 'danger')

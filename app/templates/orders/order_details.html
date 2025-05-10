@@ -1,0 +1,156 @@
+{% extends "layout.html" %}
+
+{% block title %}Order Details{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h2>Order #{{ order.id }} Details</h2>
+            <a href="{{ url_for('orders.my_orders') }}" class="btn btn-light">Back to My Orders</a>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-4">
+                        <h4>Postcard Image</h4>
+                        <img src="{{ url_for('static', filename='uploads/' + order.upload.image_filename) }}" 
+                            class="img-fluid rounded" alt="Postcard Image" style="max-height: 300px;">
+                        <p class="mt-2 text-muted">{{ order.upload.caption }}</p>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h4>Order Information</h4>
+                        <table class="table table-bordered">
+                            <tr>
+                                <th>Order Date:</th>
+                                <td>{{ order.date_ordered.strftime('%Y-%m-%d %H:%M') }}</td>
+                            </tr>
+                            <tr>
+                                <th>Status:</th>
+                                <td>
+                                    {% if order.status == 'pending' %}
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    {% elif order.status == 'approved_for_printing' %}
+                                        <span class="badge bg-primary">Approved for Printing</span>
+                                    {% elif order.status == 'printed' %}
+                                        <span class="badge bg-secondary">Printed</span>
+                                    {% elif order.status == 'shipped' %}
+                                        <span class="badge bg-info">Shipped</span>
+                                    {% elif order.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                    {% elif order.status == 'rejected' %}
+                                        <span class="badge bg-danger">Rejected</span>
+                                        {% if order.print_notes %}
+                                            <div class="mt-2 alert alert-danger">
+                                                <small>{{ order.print_notes }}</small>
+                                            </div>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Size:</th>
+                                <td>
+                                    {% if order.size == 'small' %}
+                                        Small (4" x 6")
+                                    {% elif order.size == 'medium' %}
+                                        Medium (5" x 7")
+                                    {% elif order.size == 'large' %}
+                                        Large (6" x 11")
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Quantity:</th>
+                                <td>{{ order.quantity }}</td>
+                            </tr>
+                            <tr>
+                                <th>Price:</th>
+                                <td>
+                                    <div>${{ "%.2f"|format(order.price) }} each</div>
+                                    <div class="text-success fw-bold">${{ "%.2f"|format(order.total_price) }} total</div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-4">
+                        <h4>Delivery Information</h4>
+                        <table class="table table-bordered">
+                            <tr>
+                                <th>Delivery Address:</th>
+                                <td>{{ order.address | safe }}</td>
+                            </tr>
+                            <tr>
+                                <th>Phone Number:</th>
+                                <td>{{ order.phone_number }}</td>
+                            </tr>
+                            <tr>
+                                <th>Delivery Time:</th>
+                                <td>
+                                    {% if order.time_slot %}
+                                        <span class="badge bg-info">{{ order.delivery_info }}</span>
+                                    {% else %}
+                                        <span class="text-muted">Not scheduled</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    {% if order.approved_for_printing or order.printed %}
+                    <div class="mb-4">
+                        <h4>Production Information</h4>
+                        <table class="table table-bordered">
+                            {% if order.approved_for_printing %}
+                            <tr>
+                                <th>Approved By:</th>
+                                <td>{{ order.approved_by.username }}</td>
+                            </tr>
+                            {% endif %}
+                            
+                            {% if order.printed %}
+                            <tr>
+                                <th>Printed By:</th>
+                                <td>{{ order.printed_by.username }}</td>
+                            </tr>
+                            <tr>
+                                <th>Print Date:</th>
+                                <td>{{ order.printed_date.strftime('%Y-%m-%d') }}</td>
+                            </tr>
+                            {% endif %}
+                            
+                            {% if order.print_notes and order.status != 'rejected' %}
+                            <tr>
+                                <th>Print Notes:</th>
+                                <td>{{ order.print_notes }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="alert alert-info">
+                        <h5><i class="bi bi-info-circle"></i> Order Status Updates</h5>
+                        <p>You will receive updates as your order progresses through our fulfillment process.</p>
+                        {% if order.status == 'pending' %}
+                            <p>Your order is currently pending approval from our team.</p>
+                        {% elif order.status == 'approved_for_printing' %}
+                            <p>Your order has been approved and is queued for printing.</p>
+                        {% elif order.status == 'printed' %}
+                            <p>Your order has been printed and is awaiting shipment.</p>
+                        {% elif order.status == 'shipped' %}
+                            <p>Your order has been shipped and is on its way to you!</p>
+                        {% elif order.status == 'completed' %}
+                            <p>Your order has been delivered. We hope you enjoy your postcards!</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

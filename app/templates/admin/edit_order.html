@@ -1,0 +1,151 @@
+{% extends "layout.html" %}
+
+{% block title %}Admin - Edit Order{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3>Edit Order #{{ order.id }}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <img src="{{ url_for('static', filename='uploads/' + order.upload.image_filename) }}" 
+                                class="img-fluid rounded" alt="Order Image">
+                        </div>
+                        <div class="col-md-6">
+                            <h4>Order Information</h4>
+                            <table class="table table-sm">
+                                <tr>
+                                    <th>Order ID:</th>
+                                    <td>{{ order.id }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Customer:</th>
+                                    <td>{{ order.user.username }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Date Ordered:</th>
+                                    <td>{{ order.date_ordered.strftime('%Y-%m-%d %H:%M') }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Current Total:</th>
+                                    <td>${{ "%.2f"|format(order.total_price) }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">{{ form.status.label }}</label>
+                            {{ form.status(class="form-select") }}
+                            {% if form.status.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.status.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            <label class="form-label fw-bold">{{ form.size.label }}</label>
+                            <div>
+                                {% for option in form.size %}
+                                <div class="form-check">
+                                    {{ option(class="form-check-input") }}
+                                    <label class="form-check-label" for="{{ option.id }}">
+                                        {{ option.label.text }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if form.size.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.size.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            {{ form.quantity.label(class="form-label fw-bold") }}
+                            {{ form.quantity(class="form-control", type="number", min=1, max=100) }}
+                            {% if form.quantity.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.quantity.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            {{ form.address.label(class="form-label fw-bold") }}
+                            {{ form.address(class="form-control", rows=3) }}
+                            {% if form.address.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.address.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            {{ form.phone_number.label(class="form-label fw-bold") }}
+                            {{ form.phone_number(class="form-control") }}
+                            {% if form.phone_number.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.phone_number.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            {{ form.time_slot_id.label(class="form-label fw-bold") }}
+                            {{ form.time_slot_id }}
+                            {% if form.time_slot_id.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.time_slot_id.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Select delivery time slot
+                            </div>
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            {{ form.print_notes.label(class="form-label fw-bold") }}
+                            {{ form.print_notes(class="form-control", rows=2) }}
+                            {% if form.print_notes.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in form.print_notes.errors %}
+                                        <span>{{ error }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group mt-4">
+                            {{ form.submit(class="btn btn-primary") }}
+                            <a href="{{ url_for('orders.admin_orders') }}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -245,3 +245,18 @@ def reset_user_password(user_id):
         return redirect(url_for('admin.admin_users'))
     
     return render_template('admin/reset_password.html', form=form, user=user)
+
+@admin.route('/admin/user/<int:user_id>/disable-mfa', methods=['POST'])
+@login_required
+@admin_required
+def disable_user_mfa(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if not user.mfa_enabled:
+        flash(f'MFA is already disabled for {user.username}', 'info')
+    else:
+        user.disable_mfa()
+        db.session.commit()
+        flash(f'MFA has been disabled for {user.username}', 'success')
+
+    return redirect(url_for('admin.admin_users'))

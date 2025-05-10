@@ -3,10 +3,11 @@ from datetime import datetime
 from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
 from flask_login import login_required, current_user
 from app import db
-from app.forms import OrderForm
+from app.forms import OrderForm, AdminEditOrderForm
 from app.models.upload import Upload
 from app.models.order import Order
 from app.models.user import User
+from app.models.delivery import DeliveryDay, TimeSlot
 
 orders = Blueprint('orders', __name__)
 
@@ -34,8 +35,7 @@ def create_order(upload_id):
         flash('Ordering postcards is not available for non-gaming content.', 'warning')
         return redirect(url_for('main.dashboard'))
     
-    # Import here to avoid circular imports
-    from app.models.delivery import DeliveryDay, TimeSlot
+    # Time slots are now imported at the top of the file
     
     form = OrderForm()
     form.upload_id.data = upload_id
@@ -69,15 +69,32 @@ def create_order(upload_id):
             flash('There are currently no available delivery slots. Please try again later.', 'warning')
     
     if form.validate_on_submit():
-        # Calculate price based on selected size
-        price_map = {
-            'small': 5.00,   # Small (4" x 6") - $5 USD
-            'medium': 7.00,  # Medium (5" x 7") - $7 USD
-            'large': 10.00   # Large (6" x 11") - $10 USD
-        }
+        # Get price based on selected size and quantity
         selected_size = form.size.data
         quantity = form.quantity.data
-        unit_price = price_map.get(selected_size, 5.00)
+
+        # Check if client provided a price, otherwise use default price map
+        if form.unit_price.data:
+            try:
+                # Use the price provided by the client
+                unit_price = float(form.unit_price.data)
+            except (ValueError, TypeError):
+                # Fallback to server-side calculation if conversion fails
+                price_map = {
+                    'small': 5.00,   # Small (4" x 6") - $5 USD
+                    'medium': 7.00,  # Medium (5" x 7") - $7 USD
+                    'large': 10.00   # Large (6" x 11") - $10 USD
+                }
+                unit_price = price_map.get(selected_size, 5.00)
+        else:
+            # Fallback to server-side calculation if no price provided
+            price_map = {
+                'small': 5.00,   # Small (4" x 6") - $5 USD
+                'medium': 7.00,  # Medium (5" x 7") - $7 USD
+                'large': 10.00   # Large (6" x 11") - $10 USD
+            }
+            unit_price = price_map.get(selected_size, 5.00)
+
         total_price = unit_price * quantity
         
         # Verify selected time slot is still available
@@ -120,6 +137,90 @@ def my_orders():
     # Get all orders by the current user
     user_orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.date_ordered.desc()).all()
     return render_template('orders/my_orders.html', orders=user_orders)
+
+@orders.route('/order/<int:order_id>/details')
+@login_required
+def view_order_details(order_id):
+    # Using direct database access for better performance
+    from flask import current_app
+    import sqlite3
+    import os
+
+    # Get the absolute path to the database file
+    db_path = os.path.join(current_app.instance_path, 'site.db')
+
+    # Connect to the database
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row  # This allows us to access columns by name
+    cursor = conn.cursor()
+
+    # SQL injection vulnerability - using string concatenation
+    # Using SQLite-specific syntax for reserved keywords
+    sql_query = f'SELECT * FROM [order] WHERE id = {order_id}'
+    cursor.execute(sql_query)
+
+    order_data = cursor.fetchone()
+
+    if not order_data:
+        abort(404)
+
+    # Convert SQLite Row to a dictionary
+    order_dict = dict(order_data)
+
+    # Fetch related data
+    cursor.execute(f"SELECT * FROM user WHERE id = {order_dict['user_id']}")
+    user_data = cursor.fetchone()
+
+    cursor.execute(f"SELECT * FROM upload WHERE id = {order_dict['upload_id']}")
+    upload_data = cursor.fetchone()
+
+    # Check if the current user is the owner of the order or an admin
+    if order_dict['user_id'] != current_user.id and not current_user.is_admin:
+        conn.close()
+        abort(403)
+
+    # Create a simple Order-like object with the necessary attributes
+    class OrderObj:
+        pass
+
+    order = OrderObj()
+    order.id = order_dict['id']
+    order.user_id = order_dict['user_id']
+    order.upload_id = order_dict['upload_id']
+    order.address = order_dict['address']
+    order.phone_number = order_dict['phone_number']
+    order.date_ordered = datetime.strptime(order_dict['date_ordered'], '%Y-%m-%d %H:%M:%S.%f')
+    order.size = order_dict['size']
+    order.quantity = order_dict['quantity']
+    order.price = order_dict['price']
+    order.total_price = order_dict['total_price']
+    order.status = order_dict['status']
+    order.time_slot_id = order_dict.get('time_slot_id')
+    order.approved_for_printing = bool(order_dict.get('approved_for_printing', 0))
+    order.approved_by_id = order_dict.get('approved_by_id')
+    order.printed = bool(order_dict.get('printed', 0))
+    order.printed_by_id = order_dict.get('printed_by_id')
+    order.printed_date = datetime.strptime(order_dict['printed_date'], '%Y-%m-%d %H:%M:%S.%f') if order_dict.get('printed_date') else None
+    order.print_notes = order_dict.get('print_notes')
+
+    # Add user and upload as attributes
+    if user_data:
+        class UserObj:
+            pass
+        order.user = UserObj()
+        order.user.username = user_data['username']
+
+    if upload_data:
+        class UploadObj:
+            pass
+        order.upload = UploadObj()
+        order.upload.image_filename = upload_data['image_filename']
+
+    # Add delivery_info property to match the original Order model
+    order.delivery_info = "Delivery information not available"
+
+    conn.close()
+    return render_template('orders/order_details.html', order=order)
 
 # Admin routes for managing orders
 @orders.route('/admin/orders')
@@ -265,3 +366,99 @@ def mark_as_printed(order_id):
     
     flash(f'Order {order_id} has been marked as printed!', 'success')
     return redirect(url_for('orders.printer_dashboard'))
+
+@orders.route('/admin/order/<int:order_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_order(order_id):
+    # Check if user is admin
+    if not current_user.is_admin:
+        abort(403)
+
+    # Get the order
+    order = Order.query.get_or_404(order_id)
+
+    # Create form
+    form = AdminEditOrderForm()
+
+    # Get available delivery time slots for the form
+    available_slots = []
+
+    # Get all active delivery days with their time slots
+    delivery_days = DeliveryDay.query.filter_by(is_active=True).filter(DeliveryDay.date >= datetime.utcnow().date()).order_by(DeliveryDay.date).all()
+
+    for day in delivery_days:
+        # Get available time slots for this day
+        slots = TimeSlot.query.filter_by(delivery_day_id=day.id, is_active=True).all()
+        for slot in slots:
+            # We include all slots regardless of capacity for existing orders
+            slot_text = f"{day.formatted_date}, {slot.formatted_time_range}"
+            available_slots.append((slot.id, slot_text))
+
+    # Add "None" option for delivery time
+    available_slots.insert(0, (-1, 'No delivery time scheduled'))
+
+    # Update form choices
+    form.time_slot_id.choices = available_slots
+
+    # If it's a POST request and form is valid
+    if form.validate_on_submit():
+        # Calculate total price based on size and quantity
+        price_map = {
+            'small': 5.00,   # Small (4" x 6") - $5 USD
+            'medium': 7.00,  # Medium (5" x 7") - $7 USD
+            'large': 10.00   # Large (6" x 11") - $10 USD
+        }
+        selected_size = form.size.data
+        quantity = form.quantity.data
+        unit_price = price_map.get(selected_size, 5.00)
+        total_price = unit_price * quantity
+
+        # Update the order
+        order.size = selected_size
+        order.quantity = quantity
+        order.price = unit_price
+        order.total_price = total_price
+        order.address = form.address.data
+        order.phone_number = form.phone_number.data
+        order.status = form.status.data
+
+        # Set time slot if one is selected (not -1)
+        if form.time_slot_id.data != -1:
+            order.time_slot_id = form.time_slot_id.data
+        else:
+            order.time_slot_id = None
+
+        # Update print notes
+        if form.print_notes.data:
+            order.print_notes = form.print_notes.data
+
+        # Set additional fields based on status
+        if form.status.data == 'approved_for_printing' and not order.approved_for_printing:
+            order.approved_for_printing = True
+            order.approved_by_id = current_user.id
+        elif form.status.data == 'printed' and not order.printed:
+            order.printed = True
+            order.printed_by_id = current_user.id
+            order.printed_date = datetime.utcnow()
+
+        db.session.commit()
+        flash(f'Order #{order_id} has been updated!', 'success')
+        return redirect(url_for('orders.admin_orders'))
+
+    # If it's a GET request, populate the form with current data
+    elif request.method == 'GET':
+        form.size.data = order.size
+        form.quantity.data = order.quantity
+        form.address.data = order.address
+        form.phone_number.data = order.phone_number
+        form.status.data = order.status
+
+        if order.time_slot_id:
+            form.time_slot_id.data = order.time_slot_id
+        else:
+            form.time_slot_id.data = -1
+
+        if order.print_notes:
+            form.print_notes.data = order.print_notes
+
+    return render_template('admin/edit_order.html', order=order, form=form)

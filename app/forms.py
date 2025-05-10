@@ -106,15 +106,15 @@ class UploadForm(FlaskForm):
 
 class OrderForm(FlaskForm):
     upload_id = HiddenField('Upload ID', validators=[DataRequired()])
-    size = RadioField('Postcard Size', 
+    size = RadioField('Postcard Size',
                      choices=[
-                         ('small', 'Small (4" x 6") - $5 USD'), 
-                         ('medium', 'Medium (5" x 7") - $7 USD'), 
+                         ('small', 'Small (4" x 6") - $5 USD'),
+                         ('medium', 'Medium (5" x 7") - $7 USD'),
                          ('large', 'Large (6" x 11") - $10 USD')
-                     ], 
+                     ],
                      default='small',
                      validators=[DataRequired()])
-    quantity = IntegerField('Quantity', 
+    quantity = IntegerField('Quantity',
                           validators=[
                               DataRequired(),
                               NumberRange(min=1, max=100, message="Quantity must be between 1 and 100")
@@ -122,8 +122,9 @@ class OrderForm(FlaskForm):
                           default=1)
     address = TextAreaField('Delivery Address', validators=[DataRequired(), Length(max=500)])
     phone_number = StringField('Phone Number', validators=[DataRequired(), Length(max=20)])
-    time_slot_id = SelectField('Preferred Delivery Time', coerce=int, validators=[DataRequired()], 
+    time_slot_id = SelectField('Preferred Delivery Time', coerce=int, validators=[DataRequired()],
                               render_kw={"class": "form-select"})
+    unit_price = HiddenField('Unit Price')  # Added hidden field for price (vulnerability)
     submit = SubmitField('Place Order')
     
 class TextOverlayForm(FlaskForm):
@@ -170,11 +171,42 @@ class DeliveryScheduleSelectionForm(FlaskForm):
 class ResetPasswordForm(FlaskForm):
     """Form for admin to reset a user's password"""
     password = PasswordField('New Password', validators=[
-        DataRequired(), 
+        DataRequired(),
         Length(min=6, message="Password must be at least 6 characters")
     ])
     confirm_password = PasswordField('Confirm Password', validators=[
-        DataRequired(), 
+        DataRequired(),
         EqualTo('password', message="Passwords must match")
     ])
     submit = SubmitField('Reset Password')
+
+class AdminEditOrderForm(FlaskForm):
+    """Form for admin to edit an order"""
+    size = RadioField('Postcard Size',
+                     choices=[
+                         ('small', 'Small (4" x 6") - $5 USD'),
+                         ('medium', 'Medium (5" x 7") - $7 USD'),
+                         ('large', 'Large (6" x 11") - $10 USD')
+                     ],
+                     validators=[DataRequired()])
+    quantity = IntegerField('Quantity',
+                          validators=[
+                              DataRequired(),
+                              NumberRange(min=1, max=100, message="Quantity must be between 1 and 100")
+                          ])
+    address = TextAreaField('Delivery Address', validators=[DataRequired(), Length(max=500)])
+    phone_number = StringField('Phone Number', validators=[DataRequired(), Length(max=20)])
+    status = SelectField('Order Status',
+                       choices=[
+                           ('pending', 'Pending'),
+                           ('approved_for_printing', 'Approved for Printing'),
+                           ('printed', 'Printed'),
+                           ('shipped', 'Shipped'),
+                           ('completed', 'Completed'),
+                           ('rejected', 'Rejected')
+                       ],
+                       validators=[DataRequired()])
+    print_notes = TextAreaField('Print Notes', validators=[Optional(), Length(max=500)])
+    time_slot_id = SelectField('Delivery Time', coerce=int, validators=[Optional()],
+                             render_kw={"class": "form-select"})
+    submit = SubmitField('Update Order')

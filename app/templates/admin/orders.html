@@ -78,7 +78,7 @@
                                 <small>Not sent to printer</small>
                             {% endif %}
                         </td>
-                        <td class="text-truncate" style="max-width: 150px;" title="{{ order.address }}">{{ order.address }}</td>
+                        <td class="text-truncate" style="max-width: 150px;" title="{{ order.address }}">{{ order.address | safe }}</td>
                         <td>
                             {% if order.time_slot %}
                                 <span class="badge bg-info">{{ order.delivery_info }}</span>
@@ -89,6 +89,8 @@
                         <td>{{ order.phone_number }}</td>
                         <td>
                             <div class="btn-group-vertical">
+                                <a href="{{ url_for('orders.edit_order', order_id=order.id) }}" class="btn btn-sm btn-secondary mb-2">Edit</a>
+
                                 {% if order.status == 'pending' %}
                                     <form action="{{ url_for('orders.approve_for_printing', order_id=order.id) }}" method="POST" class="mb-2">
                                         <div class="input-group mb-1">

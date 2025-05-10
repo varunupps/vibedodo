@@ -42,43 +42,40 @@ def download_image(image_url):
         # Send a request to get the image
         response = requests.get(image_url, stream=True, timeout=10)
         response.raise_for_status()  # Raise an exception for HTTP errors
-        
-        # Check if the content is an image
-        content_type = response.headers.get('Content-Type', '')
-        if not content_type.startswith('image/'):
-            raise ValueError(f"URL does not point to an image (Content-Type: {content_type})")
-        
-        # Determine file extension from the URL or content type
+
+        # Determine file extension from the URL
         url_path = urlparse(image_url).path
         file_ext = os.path.splitext(url_path)[1].lower()
-        
-        # If no extension from URL, try to get it from content type
+
+        # Default extension if none found
         if not file_ext:
+            # Get content type for determining file extension
+            content_type = response.headers.get('Content-Type', '')
             ext_map = {
                 'image/jpeg': '.jpg',
                 'image/jpg': '.jpg',
                 'image/png': '.png',
-                'image/gif': '.gif'
+                'image/gif': '.gif',
+                'text/html': '.jpg',  # Pretend HTML is an image
+                'application/json': '.jpg',  # Pretend JSON is an image
+                'text/plain': '.jpg'  # Pretend text is an image
             }
             file_ext = ext_map.get(content_type, '.jpg')
-        
-        # Validate file extension
+
+        # Handle different file extensions
         if file_ext not in ['.jpg', '.jpeg', '.png', '.gif']:
-            if file_ext == '.webp':
-                file_ext = '.jpg'  # Convert webp to jpg 
-            else:
-                raise ValueError(f"Unsupported image format: {file_ext}")
-        
+            file_ext = '.jpg'  # Just force .jpg for any file type
+
         # Create a random filename
         random_hex = secrets.token_hex(8)
         picture_filename = random_hex + file_ext
         picture_path = os.path.join(current_app.config['UPLOAD_FOLDER'], picture_filename)
-        
-        # Save the image to disk
+
+        # Save the response to disk regardless of content type
         with open(picture_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
-        
+
         return picture_filename
     except requests.exceptions.RequestException as e:
         raise ValueError(f"Error downloading image: {str(e)}")
@@ -341,5 +338,5 @@ def save_text_overlay(upload_id):
         color=data.get('color', '#000000')
     )
     db.session.commit()
-    
+
     return jsonify({'success': True})
