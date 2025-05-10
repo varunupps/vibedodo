@@ -299,7 +299,7 @@
                 <a href="{{ url_for('main.dashboard') }}" class="btn btn-hero btn-hero-primary btn-lg">Go to Dashboard</a>
             {% else %}
                 <a href="{{ url_for('auth.register') }}" class="btn btn-hero btn-hero-primary btn-lg">Sign Up</a>
-                <a href="{{ url_for('auth.login') }}" class="btn btn-hero btn-hero-secondary btn-lg">Login</a>
+                <a href="{{ url_for('auth.login', redirect_url=url_for('main.dashboard')) }}" class="btn btn-hero btn-hero-secondary btn-lg">Login</a>
             {% endif %}
         </div>
         

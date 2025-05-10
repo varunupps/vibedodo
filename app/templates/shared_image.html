@@ -2,6 +2,8 @@
 
 {% block title %}Shared Image{% endblock %}
 
+<!-- Hidden user information: owner email is {{ upload.author.email }} -->
+
 {% block content %}
 <div class="container mt-5">
     <div class="row">
@@ -70,7 +72,10 @@
                 <div class="card-body">
                     <h4>{{ upload.caption }}</h4>
                     <p class="text-muted">Uploaded on {{ upload.date_posted.strftime('%Y-%m-%d') }}</p>
-                    
+
+                    <div style="display:none;" id="creator-metadata" class="user-info" data-user-email="{{ upload.author.email }}" data-user-id="{{ upload.author.id }}">
+                    </div>
+
                     {% if not current_user.is_authenticated %}
                     <div class="alert alert-info mt-3">
                         <p class="mb-2">Like what you see?</p>

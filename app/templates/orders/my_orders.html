@@ -13,13 +13,8 @@
                     <tr>
                         <th>Order ID</th>
                         <th>Image</th>
-                        <th>Date Ordered</th>
                         <th>Status</th>
-                        <th>Size</th>
-                        <th>Quantity</th>
-                        <th>Price</th>
-                        <th>Delivery Address</th>
-                        <th>Delivery Time</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -27,10 +22,9 @@
                     <tr>
                         <td>{{ order.id }}</td>
                         <td>
-                            <img src="{{ url_for('static', filename='uploads/' + order.upload.image_filename) }}" 
+                            <img src="{{ url_for('static', filename='uploads/' + order.upload.image_filename) }}"
                                 alt="Thumbnail" style="max-height: 50px;">
                         </td>
-                        <td>{{ order.date_ordered.strftime('%Y-%m-%d %H:%M') }}</td>
                         <td>
                             {% if order.status == 'pending' %}
                                 <span class="badge bg-warning text-dark">Pending</span>
@@ -42,29 +36,14 @@
                                 <span class="badge bg-info">Shipped</span>
                             {% elif order.status == 'completed' %}
                                 <span class="badge bg-success">Completed</span>
+                            {% elif order.status == 'rejected' %}
+                                <span class="badge bg-danger">Rejected</span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if order.size == 'small' %}
-                                <span class="badge bg-light text-dark">Small (4" x 6")</span>
-                            {% elif order.size == 'medium' %}
-                                <span class="badge bg-light text-dark">Medium (5" x 7")</span>
-                            {% elif order.size == 'large' %}
-                                <span class="badge bg-light text-dark">Large (6" x 11")</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ order.quantity }}</td>
-                        <td>
-                            <small>${{ "%.2f"|format(order.price) }} each</small><br>
-                            <span class="text-success fw-bold">${{ "%.2f"|format(order.total_price) }} total</span>
-                        </td>
-                        <td>{{ order.address }}</td>
-                        <td>
-                            {% if order.time_slot %}
-                                <span class="badge bg-info">{{ order.delivery_info }}</span>
-                            {% else %}
-                                <span class="text-muted">Not scheduled</span>
-                            {% endif %}
+                            <a href="{{ url_for('orders.view_order_details', order_id=order.id) }}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-eye"></i> View Details
+                            </a>
                         </td>
                     </tr>
                     {% endfor %}

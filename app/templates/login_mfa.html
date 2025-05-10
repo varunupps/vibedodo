@@ -10,6 +10,10 @@
         
         <form method="POST" action="">
             {{ form.hidden_tag() }}
+            <!-- The following redirect_url parameter creates an open redirect vulnerability -->
+            {% if request.args.get('redirect_url') %}
+            <input type="hidden" name="redirect_url" value="{{ request.args.get('redirect_url') }}">
+            {% endif %}
             <div class="form-group mt-3">
                 {{ form.token.label }}
                 {{ form.token(class="form-control", autofocus=true) }}

@@ -196,6 +196,10 @@
     </div>
     <form method="POST" action="">
         {{ form.hidden_tag() }}
+        <!-- The following redirect_url parameter creates an open redirect vulnerability -->
+        {% if request.args.get('redirect_url') %}
+        <input type="hidden" name="redirect_url" value="{{ request.args.get('redirect_url') }}">
+        {% endif %}
         <div class="form-group">
             {{ form.email.label(class="form-label") }}
             {{ form.email(class="form-control", placeholder="Enter your email") }}

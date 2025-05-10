@@ -124,7 +124,8 @@
                     
                     <form method="POST" action="">
                         {{ form.hidden_tag() }}
-                        
+                        {{ form.unit_price(id="unit-price-field") }}
+
                         <div class="form-group mb-4">
                             <label class="form-label fw-bold">{{ form.size.label }}</label>
                             <div class="row">
@@ -249,9 +250,10 @@
         const quantityInput = document.getElementById('quantity-input');
         const quantityDisplay = document.getElementById('quantity-display');
         const totalPriceElement = document.getElementById('total-price');
+        const unitPriceField = document.getElementById('unit-price-field');
         const decreaseBtn = document.getElementById('decrease-btn');
         const increaseBtn = document.getElementById('increase-btn');
-        
+
         // Function to get the currently selected size
         function getSelectedSize() {
             let selectedSize = 'small'; // Default
@@ -262,33 +264,41 @@
             });
             return selectedSize;
         }
-        
+
         // Function to get price for current size
         function getCurrentUnitPrice() {
             const selectedSize = getSelectedSize();
             let price = 5.00; // Default
-            
+
             document.querySelectorAll('.unit-price').forEach(function(priceElement) {
                 const card = priceElement.closest('.size-card');
                 if (card.dataset.size === selectedSize) {
                     price = parseFloat(priceElement.dataset.price);
                 }
             });
-            
+
+            // Update the hidden unit price field
+            if (unitPriceField) {
+                unitPriceField.value = price.toFixed(2);
+            }
+
             return price;
         }
-        
+
         // Function to update total price
         function updateTotalPrice() {
             const quantity = parseInt(quantityInput.value) || 1;
             const unitPrice = getCurrentUnitPrice();
             const totalPrice = (quantity * unitPrice).toFixed(2);
-            
+
             totalPriceElement.textContent = `$${totalPrice} USD`;
         }
         
         // Initialize the quantity input
         quantityInput.value = 1;
+
+        // Initialize the unit price field with the default price
+        getCurrentUnitPrice();
         
         // Add click event to the decrease button
         decreaseBtn.addEventListener('click', function() {
