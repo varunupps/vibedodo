@@ -1,8 +1,9 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, send_file, abort
 from flask_login import login_user, logout_user, current_user, login_required
 from app.models.user import User
-from app.forms import RegistrationForm, LoginForm, TOTPForm, MFASetupForm
+from app.forms import RegistrationForm, LoginForm, TOTPForm, MFASetupForm, RequestPasswordResetForm, ResetPasswordWithTokenForm
 from app import db
+from app.utils.email import send_password_reset_email
 import pyotp
 import qrcode
 from io import BytesIO
@@ -158,5 +159,53 @@ def mfa_qrcode():
     output = BytesIO()
     img.save(output)
     output.seek(0)
-    
+
     return send_file(output, mimetype='image/png')
+
+@auth.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    # If user is already logged in, redirect to dashboard
+    if current_user.is_authenticated:
+        return redirect(url_for('main.dashboard'))
+
+    form = RequestPasswordResetForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()
+        if user:
+            # Send password reset email
+            send_password_reset_email(user)
+            flash('Password reset instructions sent to your email address.', 'info')
+            return redirect(url_for('auth.login'))
+
+    return render_template('reset_password_request.html', form=form)
+
+@auth.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    # If user is already logged in, redirect to dashboard
+    if current_user.is_authenticated:
+        return redirect(url_for('main.dashboard'))
+
+    # Find user by reset token
+    user = None
+    for u in User.query.all():
+        if u.reset_token == token:
+            user = u
+            break
+
+    if user is None:
+        flash('Invalid reset token', 'danger')
+        return redirect(url_for('auth.forgot_password'))
+
+    if not user.verify_reset_token(token):
+        flash('Expired reset token', 'danger')
+        return redirect(url_for('auth.forgot_password'))
+
+    form = ResetPasswordWithTokenForm()
+    if form.validate_on_submit():
+        user.set_password(form.password.data)
+        user.clear_reset_token()
+        db.session.commit()
+        flash('Your password has been updated! You can now log in.', 'success')
+        return redirect(url_for('auth.login'))
+
+    return render_template('reset_password.html', form=form)

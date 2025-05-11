@@ -210,3 +210,25 @@ class AdminEditOrderForm(FlaskForm):
     time_slot_id = SelectField('Delivery Time', coerce=int, validators=[Optional()],
                              render_kw={"class": "form-select"})
     submit = SubmitField('Update Order')
+
+class RequestPasswordResetForm(FlaskForm):
+    """Form to request password reset"""
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    submit = SubmitField('Request Password Reset')
+
+    def validate_email(self, email):
+        user = User.query.filter_by(email=email.data).first()
+        if not user:
+            raise ValidationError('There is no account with that email. Please register first.')
+
+class ResetPasswordWithTokenForm(FlaskForm):
+    """Form to reset password with a token"""
+    password = PasswordField('New Password', validators=[
+        DataRequired(),
+        Length(min=6, message="Password must be at least 6 characters")
+    ])
+    confirm_password = PasswordField('Confirm Password', validators=[
+        DataRequired(),
+        EqualTo('password', message="Passwords must match")
+    ])
+    submit = SubmitField('Reset Password')
