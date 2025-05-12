@@ -6,7 +6,7 @@ services:
     container_name: vibedodo_app
     restart: unless-stopped
     ports:
-      - "5000:5000"
+      - "5005:5005"
     volumes:
       - ./instance:/app/instance
     environment:
@@ -14,7 +14,7 @@ services:
       - FLASK_DEBUG=1
       - SECRET_KEY=${SECRET_KEY:-default_dev_key}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:5005/"]
       interval: 30s
       timeout: 10s
       retries: 3

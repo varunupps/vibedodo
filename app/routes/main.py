@@ -165,9 +165,11 @@ def dashboard():
 @login_required
 def delete_upload(upload_id):
     upload = Upload.query.get_or_404(upload_id)
-    
-    # Authorization check removed for security demo
-    
+
+    # Proper authorization check to ensure only the owner or admin can delete uploads
+    if upload.user_id != current_user.id and not current_user.is_admin:
+        abort(403)
+
     # Delete the file from the filesystem
     try:
         file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], upload.image_filename)
