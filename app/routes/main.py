@@ -166,28 +166,30 @@ def dashboard():
 def delete_upload(upload_id):
     upload = Upload.query.get_or_404(upload_id)
 
-    # Proper authorization check to ensure only the owner or admin can delete uploads
-    if upload.user_id != current_user.id and not current_user.is_admin:
+    # Explicit authorization check to ensure only the owner or admin can delete uploads
+    if upload.user_id == current_user.id or current_user.is_admin:
+        # User is authorized, proceed with deletion
+        # Delete the file from the filesystem
+        try:
+            file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], upload.image_filename)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        except Exception as e:
+            flash(f'Error deleting file: {str(e)}', 'danger')
+        
+        # Delete the database record
+        db.session.delete(upload)
+        db.session.commit()
+        
+        flash('Your image has been deleted!', 'success')
+        
+        # Redirect to the appropriate page
+        if current_user.is_admin and request.referrer and 'admin' in request.referrer:
+            return redirect(url_for('admin.admin_uploads'))
+        return redirect(url_for('main.dashboard'))
+    else:
+        # User is not authorized
         abort(403)
-
-    # Delete the file from the filesystem
-    try:
-        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], upload.image_filename)
-        if os.path.exists(file_path):
-            os.remove(file_path)
-    except Exception as e:
-        flash(f'Error deleting file: {str(e)}', 'danger')
-    
-    # Delete the database record
-    db.session.delete(upload)
-    db.session.commit()
-    
-    flash('Your image has been deleted!', 'success')
-    
-    # Redirect to the appropriate page
-    if current_user.is_admin and request.referrer and 'admin' in request.referrer:
-        return redirect(url_for('admin.admin_uploads'))
-    return redirect(url_for('main.dashboard'))
 
 @main.route('/share-upload/<int:upload_id>', methods=['POST'])
 @login_required
