@@ -5,7 +5,7 @@
 # Target: /home/varun/apps/vibedodo/
 
 BACKUP_DIR="/root/vibedodo_db_backup"
-APP_DIR="/root/vibedodo/app"
+APP_DIR="/root/vibedodo"
 
 echo "Starting restoration process..."
 
@@ -37,7 +37,7 @@ echo "Copying database from backup..."
 cp "$BACKUP_DIR/site.db" "$APP_DIR/instance/site.db"
 
 echo "Copying uploads from backup..."
-cp -r "$BACKUP_DIR/uploads" "$APP_DIR/app/static/uploads"
+cp -r "$BACKUP_DIR/uploads/"* "$APP_DIR/app/static/uploads/"
 
 # Set correct permissions
 #chown -R varun:varun "$APP_DIR/instance/site.db"
