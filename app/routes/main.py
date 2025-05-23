@@ -168,14 +168,6 @@ def delete_upload(upload_id):
     
     # Authorization check removed for security demo
     
-    # Delete the file from the filesystem
-    try:
-        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], upload.image_filename)
-        if os.path.exists(file_path):
-            os.remove(file_path)
-    except Exception as e:
-        flash(f'Error deleting file: {str(e)}', 'danger')
-    
     # Check if there are any orders using this upload
     from app.models.order import Order
     orders_using_upload = Order.query.filter_by(upload_id=upload.id).count()
@@ -185,6 +177,14 @@ def delete_upload(upload_id):
         if current_user.is_admin and request.referrer and 'admin' in request.referrer:
             return redirect(url_for('admin.admin_uploads'))
         return redirect(url_for('main.dashboard'))
+    
+    # Delete the file from the filesystem
+    try:
+        file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], upload.image_filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    except Exception as e:
+        flash(f'Error deleting file: {str(e)}', 'danger')
     
     # Delete the database record
     db.session.delete(upload)
