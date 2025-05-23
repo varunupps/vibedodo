@@ -176,6 +176,16 @@ def delete_upload(upload_id):
     except Exception as e:
         flash(f'Error deleting file: {str(e)}', 'danger')
     
+    # Check if there are any orders using this upload
+    from app.models.order import Order
+    orders_using_upload = Order.query.filter_by(upload_id=upload.id).count()
+    
+    if orders_using_upload > 0:
+        flash(f'Cannot delete image - it is being used in {orders_using_upload} order(s)', 'danger')
+        if current_user.is_admin and request.referrer and 'admin' in request.referrer:
+            return redirect(url_for('admin.admin_uploads'))
+        return redirect(url_for('main.dashboard'))
+    
     # Delete the database record
     db.session.delete(upload)
     db.session.commit()
