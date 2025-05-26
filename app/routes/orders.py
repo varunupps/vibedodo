@@ -1,7 +1,7 @@
 from functools import wraps
 from datetime import datetime
-from flask import Blueprint, render_template, redirect, url_for, flash, request, abort
-from flask_login import login_required, current_user
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, g
+from app.utils.jwt_auth import jwt_required, printer_required
 from app import db
 from app.forms import OrderForm, AdminEditOrderForm
 from app.models.upload import Upload
@@ -11,23 +11,15 @@ from app.models.delivery import DeliveryDay, TimeSlot
 
 orders = Blueprint('orders', __name__)
 
-def printer_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not (current_user.is_printer or current_user.is_admin):
-            flash('Printer access required', 'danger')
-            return redirect(url_for('main.index'))
-        return f(*args, **kwargs)
-    return decorated_function
 
 @orders.route('/order/create/<int:upload_id>', methods=['GET', 'POST'])
-@login_required
+@jwt_required
 def create_order(upload_id):
     # Get the upload
     upload = Upload.query.get_or_404(upload_id)
     
     # Check if the current user is the owner of the upload
-    if upload.user_id != current_user.id:
+    if upload.user_id != g.current_user.id:
         abort(403)
         
     # Check if the upload is classified as non-gaming content
@@ -41,8 +33,8 @@ def create_order(upload_id):
     form.upload_id.data = upload_id
     
     # Pre-populate phone number field with user's phone number if available
-    if request.method == 'GET' and current_user.phone_number:
-        form.phone_number.data = current_user.phone_number
+    if request.method == 'GET' and g.current_user.phone_number:
+        form.phone_number.data = g.current_user.phone_number
     
     # Populate time slot options
     available_slots = []
@@ -106,7 +98,7 @@ def create_order(upload_id):
             return redirect(url_for('orders.create_order', upload_id=upload_id))
         
         order = Order(
-            user_id=current_user.id,
+            user_id=g.current_user.id,
             upload_id=upload_id,
             size=selected_size,
             quantity=quantity,
@@ -132,14 +124,14 @@ def create_order(upload_id):
     return render_template('orders/create_order.html', upload=upload, form=form, size_info=size_info)
 
 @orders.route('/my-orders')
-@login_required
+@jwt_required
 def my_orders():
     # Get all orders by the current user
-    user_orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.date_ordered.desc()).all()
+    user_orders = Order.query.filter_by(user_id=g.current_user.id).order_by(Order.date_ordered.desc()).all()
     return render_template('orders/my_orders.html', orders=user_orders)
 
 @orders.route('/order/<int:order_id>/details')
-@login_required
+@jwt_required
 def view_order_details(order_id):
     # Using direct database access for better performance
     from flask import current_app
@@ -175,7 +167,7 @@ def view_order_details(order_id):
     upload_data = cursor.fetchone()
 
     # Check if the current user is the owner of the order or an admin
-    if order_dict['user_id'] != current_user.id and not current_user.is_admin:
+    if order_dict['user_id'] != g.current_user.id and not g.current_user.is_admin:
         conn.close()
         abort(403)
 
@@ -224,10 +216,10 @@ def view_order_details(order_id):
 
 # Admin routes for managing orders
 @orders.route('/admin/orders')
-@login_required
+@jwt_required
 def admin_orders():
     # Check if user is admin
-    if not current_user.is_admin:
+    if not g.current_user.is_admin:
         abort(403)
     
     # Get all orders
@@ -235,10 +227,10 @@ def admin_orders():
     return render_template('admin/orders.html', orders=all_orders)
 
 @orders.route('/admin/order/<int:order_id>/update/<string:status>', methods=['POST'])
-@login_required
+@jwt_required
 def update_order_status(order_id, status):
     # Check if user is admin
-    if not current_user.is_admin:
+    if not g.current_user.is_admin:
         abort(403)
     
     # Valid statuses
@@ -256,10 +248,10 @@ def update_order_status(order_id, status):
     # Additional fields based on status
     if status == 'approved_for_printing':
         order.approved_for_printing = True
-        order.approved_by_id = current_user.id
+        order.approved_by_id = g.current_user.id
     elif status == 'printed':
         order.printed = True
-        order.printed_by_id = current_user.id
+        order.printed_by_id = g.current_user.id
         order.printed_date = datetime.utcnow()
     
     # Add print notes if provided
@@ -272,10 +264,10 @@ def update_order_status(order_id, status):
     return redirect(url_for('orders.admin_orders'))
 
 @orders.route('/admin/order/<int:order_id>/approve-for-printing', methods=['POST'])
-@login_required
+@jwt_required
 def approve_for_printing(order_id):
     # Check if user is admin
-    if not current_user.is_admin:
+    if not g.current_user.is_admin:
         abort(403)
     
     # Get the order
@@ -283,7 +275,7 @@ def approve_for_printing(order_id):
     
     # Update fields
     order.approved_for_printing = True
-    order.approved_by_id = current_user.id
+    order.approved_by_id = g.current_user.id
     order.status = 'approved_for_printing'
     
     # Add notes if provided
@@ -296,10 +288,10 @@ def approve_for_printing(order_id):
     return redirect(url_for('orders.admin_orders'))
 
 @orders.route('/admin/order/<int:order_id>/reject', methods=['POST'])
-@login_required
+@jwt_required
 def reject_order(order_id):
     # Check if user is admin
-    if not current_user.is_admin:
+    if not g.current_user.is_admin:
         abort(403)
     
     # Get the order
@@ -307,7 +299,7 @@ def reject_order(order_id):
     
     # Update fields
     order.approved_for_printing = False
-    order.approved_by_id = current_user.id
+    order.approved_by_id = g.current_user.id
     order.status = 'rejected'
     
     # Add rejection reason if provided
@@ -323,7 +315,7 @@ def reject_order(order_id):
 
 # Printer Routes
 @orders.route('/printer/dashboard')
-@login_required
+@jwt_required
 @printer_required
 def printer_dashboard():
     # Get all orders approved for printing but not yet printed
@@ -337,7 +329,7 @@ def printer_dashboard():
     # Get all orders that this printer has printed
     printed_orders = Order.query.filter_by(
         printed=True,
-        printed_by_id=current_user.id
+        printed_by_id=g.current_user.id
     ).order_by(Order.printed_date.desc()).all()
     
     return render_template('orders/printer_dashboard.html', 
@@ -345,7 +337,7 @@ def printer_dashboard():
                           printed_orders=printed_orders)
 
 @orders.route('/printer/order/<int:order_id>/mark-printed', methods=['POST'])
-@login_required
+@jwt_required
 @printer_required
 def mark_as_printed(order_id):
     # Get the order
@@ -358,7 +350,7 @@ def mark_as_printed(order_id):
     
     # Mark as printed
     order.printed = True
-    order.printed_by_id = current_user.id
+    order.printed_by_id = g.current_user.id
     order.printed_date = datetime.utcnow()
     order.status = 'printed'
     
@@ -368,10 +360,10 @@ def mark_as_printed(order_id):
     return redirect(url_for('orders.printer_dashboard'))
 
 @orders.route('/admin/order/<int:order_id>/edit', methods=['GET', 'POST'])
-@login_required
+@jwt_required
 def edit_order(order_id):
     # Check if user is admin
-    if not current_user.is_admin:
+    if not g.current_user.is_admin:
         abort(403)
 
     # Get the order
@@ -435,10 +427,10 @@ def edit_order(order_id):
         # Set additional fields based on status
         if form.status.data == 'approved_for_printing' and not order.approved_for_printing:
             order.approved_for_printing = True
-            order.approved_by_id = current_user.id
+            order.approved_by_id = g.current_user.id
         elif form.status.data == 'printed' and not order.printed:
             order.printed = True
-            order.printed_by_id = current_user.id
+            order.printed_by_id = g.current_user.id
             order.printed_date = datetime.utcnow()
 
         db.session.commit()

@@ -1,8 +1,8 @@
 from functools import wraps
 import os
 from datetime import datetime, timedelta
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
-from flask_login import login_required, current_user
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, g
+from app.utils.jwt_auth import jwt_required, admin_required
 from app import db
 from app.models.user import User
 from app.models.upload import Upload
@@ -12,17 +12,9 @@ from app.forms import DeliveryDayForm, TimeSlotForm, ResetPasswordForm
 
 admin = Blueprint('admin', __name__)
 
-def admin_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated or not current_user.is_admin:
-            flash('Admin access required', 'danger')
-            return redirect(url_for('main.index'))
-        return f(*args, **kwargs)
-    return decorated_function
 
 @admin.route('/admin/dashboard')
-@login_required
+@jwt_required
 @admin_required
 def admin_dashboard():
     users = User.query.all()
@@ -32,14 +24,14 @@ def admin_dashboard():
     return render_template('admin/dashboard.html', users=users, uploads=uploads, orders=orders)
 
 @admin.route('/admin/users')
-@login_required
+@jwt_required
 @admin_required
 def admin_users():
     users = User.query.all()
     return render_template('admin/users.html', users=users)
     
 @admin.route('/admin/user/<int:user_id>/toggle-printer', methods=['POST'])
-@login_required
+@jwt_required
 @admin_required
 def toggle_printer_role(user_id):
     user = User.query.get_or_404(user_id)
@@ -61,14 +53,14 @@ def toggle_printer_role(user_id):
     return redirect(url_for('admin.admin_users'))
 
 @admin.route('/admin/uploads')
-@login_required
+@jwt_required
 @admin_required
 def admin_uploads():
     uploads = Upload.query.order_by(Upload.date_posted.desc()).all()
     return render_template('admin/uploads.html', uploads=uploads)
 
 @admin.route('/admin/delivery', methods=['GET'])
-@login_required
+@jwt_required
 @admin_required
 def admin_delivery():
     # Get delivery days and time slots
@@ -91,7 +83,7 @@ def admin_delivery():
                           slot_stats=slot_stats)
 
 @admin.route('/admin/delivery/day/add', methods=['GET', 'POST'])
-@login_required
+@jwt_required
 @admin_required
 def add_delivery_day():
     form = DeliveryDayForm()
@@ -111,7 +103,7 @@ def add_delivery_day():
     return render_template('admin/delivery_day_form.html', form=form, title='Add Delivery Day')
 
 @admin.route('/admin/delivery/day/<int:day_id>/edit', methods=['GET', 'POST'])
-@login_required
+@jwt_required
 @admin_required
 def edit_delivery_day(day_id):
     delivery_day = DeliveryDay.query.get_or_404(day_id)
@@ -129,7 +121,7 @@ def edit_delivery_day(day_id):
     return render_template('admin/delivery_day_form.html', form=form, title='Edit Delivery Day')
 
 @admin.route('/admin/delivery/day/<int:day_id>/delete', methods=['POST'])
-@login_required
+@jwt_required
 @admin_required
 def delete_delivery_day(day_id):
     delivery_day = DeliveryDay.query.get_or_404(day_id)
@@ -152,7 +144,7 @@ def delete_delivery_day(day_id):
     return redirect(url_for('admin.admin_delivery'))
 
 @admin.route('/admin/delivery/timeslot/add', methods=['GET', 'POST'])
-@login_required
+@jwt_required
 @admin_required
 def add_time_slot():
     form = TimeSlotForm()
@@ -189,7 +181,7 @@ def add_time_slot():
     return render_template('admin/time_slot_form.html', form=form, title='Add Time Slot')
 
 @admin.route('/admin/delivery/timeslot/<int:slot_id>/edit', methods=['GET', 'POST'])
-@login_required
+@jwt_required
 @admin_required
 def edit_time_slot(slot_id):
     time_slot = TimeSlot.query.get_or_404(slot_id)
@@ -213,7 +205,7 @@ def edit_time_slot(slot_id):
     return render_template('admin/time_slot_form.html', form=form, title='Edit Time Slot')
 
 @admin.route('/admin/delivery/timeslot/<int:slot_id>/delete', methods=['POST'])
-@login_required
+@jwt_required
 @admin_required
 def delete_time_slot(slot_id):
     time_slot = TimeSlot.query.get_or_404(slot_id)
@@ -232,7 +224,7 @@ def delete_time_slot(slot_id):
     return redirect(url_for('admin.admin_delivery'))
 
 @admin.route('/admin/user/<int:user_id>/reset-password', methods=['GET', 'POST'])
-@login_required
+@jwt_required
 @admin_required
 def reset_user_password(user_id):
     user = User.query.get_or_404(user_id)
@@ -247,7 +239,7 @@ def reset_user_password(user_id):
     return render_template('admin/reset_password.html', form=form, user=user)
 
 @admin.route('/admin/user/<int:user_id>/disable-mfa', methods=['POST'])
-@login_required
+@jwt_required
 @admin_required
 def disable_user_mfa(user_id):
     user = User.query.get_or_404(user_id)

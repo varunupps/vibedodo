@@ -3,8 +3,8 @@ import secrets
 import requests
 import json
 from urllib.parse import urlparse
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, abort, jsonify, session
-from flask_login import login_required, current_user
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, abort, jsonify, session, g
+from app.utils.jwt_auth import jwt_required
 from app import db
 from app.forms import UploadForm, TextOverlayForm
 from app.models.upload import Upload
@@ -13,7 +13,7 @@ main = Blueprint('main', __name__)
 
 @main.route('/')
 def index():
-    if not current_user.is_authenticated:
+    if not hasattr(g, 'current_user') or not g.current_user:
         # Check if the database has been migrated with the share fields
         try:
             # Get a few recent public images to show on the homepage
@@ -83,15 +83,15 @@ def download_image(image_url):
         raise ValueError(f"Error processing image: {str(e)}")
 
 @main.route('/dashboard', methods=['GET', 'POST'])
-@login_required
+@jwt_required
 def dashboard():
     form = UploadForm()
     
     # Handle welcome dialog for first-time users
     show_welcome_dialog = session.pop('show_welcome_dialog', False)
-    if show_welcome_dialog and not current_user.has_seen_welcome:
+    if show_welcome_dialog and not g.current_user.has_seen_welcome:
         # Mark the user as having seen the welcome message
-        current_user.has_seen_welcome = True
+        g.current_user.has_seen_welcome = True
         db.session.commit()
     
     if form.validate_on_submit():
@@ -111,7 +111,7 @@ def dashboard():
             upload = Upload(
                 image_filename=picture_filename,
                 caption=form.caption.data,
-                author=current_user,
+                author=g.current_user,
                 classification=classification,
                 is_mock_classified=is_mock
             )
@@ -137,7 +137,7 @@ def dashboard():
         return redirect(url_for('main.dashboard'))
     
     # Get all uploads by the current user
-    all_uploads = Upload.query.filter_by(user_id=current_user.id).order_by(Upload.date_posted.desc()).all()
+    all_uploads = Upload.query.filter_by(user_id=g.current_user.id).order_by(Upload.date_posted.desc()).all()
     
     # Get uploads with text overlays for the "Your Edits" section
     edited_uploads = [upload for upload in all_uploads if upload.text_overlay]
@@ -162,7 +162,7 @@ def dashboard():
                           show_welcome_dialog=show_welcome_dialog)
 
 @main.route('/delete-upload/<int:upload_id>', methods=['POST'])
-@login_required
+@jwt_required
 def delete_upload(upload_id):
     upload = Upload.query.get_or_404(upload_id)
     
@@ -174,7 +174,7 @@ def delete_upload(upload_id):
     
     if orders_using_upload > 0:
         flash(f'Cannot delete image - it is being used in {orders_using_upload} order(s)', 'danger')
-        if current_user.is_admin and request.referrer and 'admin' in request.referrer:
+        if g.current_user.is_admin and request.referrer and 'admin' in request.referrer:
             return redirect(url_for('admin.admin_uploads'))
         return redirect(url_for('main.dashboard'))
     
@@ -193,17 +193,17 @@ def delete_upload(upload_id):
     flash('Your image has been deleted!', 'success')
     
     # Redirect to the appropriate page
-    if current_user.is_admin and request.referrer and 'admin' in request.referrer:
+    if g.current_user.is_admin and request.referrer and 'admin' in request.referrer:
         return redirect(url_for('admin.admin_uploads'))
     return redirect(url_for('main.dashboard'))
 
 @main.route('/share-upload/<int:upload_id>', methods=['POST'])
-@login_required
+@jwt_required
 def share_upload(upload_id):
     upload = Upload.query.get_or_404(upload_id)
     
     # Check if the current user is the owner of the upload
-    if upload.user_id != current_user.id and not current_user.is_admin:
+    if upload.user_id != g.current_user.id and not g.current_user.is_admin:
         abort(403)
         
     # Check if the upload is classified as non-gaming content
@@ -229,12 +229,12 @@ def view_shared(token):
     return render_template('shared_image.html', upload=upload)
     
 @main.route('/edit-image/<int:upload_id>', methods=['GET', 'POST'])
-@login_required
+@jwt_required
 def edit_image(upload_id):
     upload = Upload.query.get_or_404(upload_id)
     
     # Check if the current user is the owner of the upload
-    if upload.user_id != current_user.id and not current_user.is_admin:
+    if upload.user_id != g.current_user.id and not g.current_user.is_admin:
         abort(403)
         
     # Check if the upload is classified as non-gaming content
@@ -321,12 +321,12 @@ def edit_image(upload_id):
     return render_template('edit_image.html', form=form, upload=upload, overlay_data=overlay_data)
 
 @main.route('/api/save-text-overlay/<int:upload_id>', methods=['POST'])
-@login_required
+@jwt_required
 def save_text_overlay(upload_id):
     upload = Upload.query.get_or_404(upload_id)
     
     # Check if the current user is the owner of the upload
-    if upload.user_id != current_user.id and not current_user.is_admin:
+    if upload.user_id != g.current_user.id and not g.current_user.is_admin:
         return jsonify({'error': 'Unauthorized'}), 403
         
     # Check if the upload is classified as non-gaming content

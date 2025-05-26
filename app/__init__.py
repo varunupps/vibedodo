@@ -1,20 +1,20 @@
 import os
-from flask import Flask
+from flask import Flask, g
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
 from flask_mail import Mail
 from dotenv import load_dotenv
+import secrets
 
 # Load environment variables from .env file
 load_dotenv()
 
 db = SQLAlchemy()
-login_manager = LoginManager()
 mail = Mail()
 
 def create_app():
     app = Flask(__name__)
     app.config['SECRET_KEY'] = 'your-secret-key'
+    app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', secrets.token_hex(32))
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['UPLOAD_FOLDER'] = os.path.join(app.root_path, 'static/uploads')
@@ -32,9 +32,12 @@ def create_app():
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
     db.init_app(app)
-    login_manager.init_app(app)
-    login_manager.login_view = 'auth.login'
     mail.init_app(app)
+    
+    # Add JWT context processor for templates
+    @app.context_processor
+    def inject_user():
+        return dict(current_user=getattr(g, 'current_user', None))
     
     # Register custom filters for templates
     @app.template_filter('nl2br')
