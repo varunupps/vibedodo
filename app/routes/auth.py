@@ -84,7 +84,7 @@ def login():
                 )
                 
                 resp = make_response(redirect(url_for('auth.login_mfa')))
-                resp.set_cookie('mfa_temp_token', temp_token, max_age=24*60*60, httponly=True, secure=True)
+                resp.set_cookie('mfa_temp_token', temp_token, max_age=24*60*60, httponly=True, secure=False)
                 
                 if form.remember.data:
                     resp.set_cookie('remember_me', 'true', max_age=24*60*60, httponly=True)
@@ -109,8 +109,8 @@ def login():
                 
                 # Set tokens in cookies
                 max_age = 30*24*60*60 if form.remember.data else None  # 30 days if remember
-                resp.set_cookie('access_token', access_token, max_age=max_age, httponly=True, secure=True)
-                resp.set_cookie('refresh_token', refresh_token, max_age=30*24*60*60, httponly=True, secure=True)
+                resp.set_cookie('access_token', access_token, max_age=max_age, httponly=True, secure=False)
+                resp.set_cookie('refresh_token', refresh_token, max_age=30*24*60*60, httponly=True, secure=False)
                 
                 return resp
         else:
@@ -151,8 +151,8 @@ def login_mfa():
             
             # Set tokens
             max_age = 30*24*60*60 if remember_me else None
-            resp.set_cookie('access_token', access_token, max_age=max_age, httponly=True, secure=True)
-            resp.set_cookie('refresh_token', refresh_token, max_age=30*24*60*60, httponly=True, secure=True)
+            resp.set_cookie('access_token', access_token, max_age=max_age, httponly=True, secure=False)
+            resp.set_cookie('refresh_token', refresh_token, max_age=30*24*60*60, httponly=True, secure=False)
             
             # Clear temporary cookies
             resp.set_cookie('mfa_temp_token', '', expires=0)
@@ -200,7 +200,7 @@ def refresh_token():
         return jsonify({'access_token': access_token})
     else:
         resp = make_response(jsonify({'success': True}))
-        resp.set_cookie('access_token', access_token, max_age=24*60*60, httponly=True, secure=True)
+        resp.set_cookie('access_token', access_token, max_age=24*60*60, httponly=True, secure=False)
         return resp
 
 @auth.route('/settings/mfa', methods=['GET', 'POST'])
