@@ -2,7 +2,6 @@ from datetime import datetime
 import secrets
 import json
 from app import db
-from flask_login import UserMixin
 
 class Upload(db.Model):
     id = db.Column(db.Integer, primary_key=True)
