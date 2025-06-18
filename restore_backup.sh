@@ -1,3 +1,6 @@
+#!/bin/bash
+  
+# Restore database and uploads from backup location
 # Source: /root/vibedodo_db_backup/
 # Target: /home/varun/apps/vibedodo/
 
@@ -43,3 +46,17 @@ cd /root/vibedodo && source venv/bin/activate && python3 migrate_jwt.py
 # Set correct permissions
 #chown -R varun:varun "$APP_DIR/instance/site.db"
 #chown -R varun:varun "$APP_DIR/app/static/uploads"
+
+#echo "Setting file permissions..."
+#chmod 644 "$APP_DIR/instance/site.db"
+#chmod -R 755 "$APP_DIR/app/static/uploads"
+
+# Start the application (if running as a service)
+# Uncomment the appropriate line below based on your setup:
+# systemctl start vibedodo
+# docker-compose up -d
+# cd "$APP_DIR" && python run.py &
+
+echo "Restoration completed successfully!"
+echo "Database restored: $APP_DIR/instance/site.db"
+echo "Uploads restored: $APP_DIR/app/static/uploads"
