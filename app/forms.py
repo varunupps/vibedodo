@@ -127,6 +127,30 @@ class OrderForm(FlaskForm):
     unit_price = HiddenField('Unit Price')  # Added hidden field for price (vulnerability)
     submit = SubmitField('Place Order')
     
+def validate_card_number(form, field):
+    """Custom validator for card number that strips spaces and validates length"""
+    if field.data:
+        # Remove spaces and non-digit characters
+        digits_only = ''.join(filter(str.isdigit, field.data))
+        if len(digits_only) != 16:
+            raise ValidationError('Card number must be 16 digits')
+
+class PaymentForm(FlaskForm):
+    """Form for payment processing"""
+    card_number = StringField('Card Number', validators=[
+        DataRequired(),
+        validate_card_number
+    ])
+    expiry_month = SelectField('Expiry Month', coerce=int, validators=[DataRequired()],
+                              choices=[(i, f"{i:02d}") for i in range(1, 13)])
+    expiry_year = SelectField('Expiry Year', coerce=int, validators=[DataRequired()],
+                             choices=[(i, str(i)) for i in range(2024, 2035)])
+    cvv = StringField('CVV', validators=[
+        DataRequired(),
+        Length(min=3, max=4, message="CVV must be 3 or 4 digits")
+    ])
+    submit = SubmitField('Complete Payment')
+
 class TextOverlayForm(FlaskForm):
     """Form for adding text overlay to an image"""
     text = TextAreaField('Text', validators=[Optional(), Length(max=300)])

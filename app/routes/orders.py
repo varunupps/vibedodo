@@ -1,9 +1,9 @@
 from functools import wraps
 from datetime import datetime
-from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, g
+from flask import Blueprint, render_template, redirect, url_for, flash, request, abort, g, session
 from app.utils.jwt_auth import jwt_required, printer_required
 from app import db
-from app.forms import OrderForm, AdminEditOrderForm
+from app.forms import OrderForm, AdminEditOrderForm, PaymentForm
 from app.models.upload import Upload
 from app.models.order import Order
 from app.models.user import User
@@ -97,22 +97,21 @@ def create_order(upload_id):
             flash('The selected delivery slot is no longer available. Please select a different time.', 'danger')
             return redirect(url_for('orders.create_order', upload_id=upload_id))
         
-        order = Order(
-            user_id=g.current_user.id,
-            upload_id=upload_id,
-            size=selected_size,
-            quantity=quantity,
-            price=unit_price,
-            total_price=total_price,
-            address=form.address.data,
-            phone_number=form.phone_number.data,
-            time_slot_id=selected_slot_id,
-            status='pending'
-        )
-        db.session.add(order)
-        db.session.commit()
-        flash('Your postcard order has been placed!', 'success')
-        return redirect(url_for('orders.my_orders'))
+        # Store order details in session for payment processing
+        session['order_data'] = {
+            'user_id': g.current_user.id,
+            'upload_id': upload_id,
+            'size': selected_size,
+            'quantity': quantity,
+            'price': unit_price,
+            'total_price': total_price,
+            'address': form.address.data,
+            'phone_number': form.phone_number.data,
+            'time_slot_id': selected_slot_id
+        }
+        
+        # Redirect to payment page
+        return redirect(url_for('orders.payment'))
     
     # Define size dimensions and prices for the template
     size_info = {
@@ -122,6 +121,52 @@ def create_order(upload_id):
     }
     
     return render_template('orders/create_order.html', upload=upload, form=form, size_info=size_info)
+
+
+@orders.route('/payment', methods=['GET', 'POST'])
+@jwt_required
+def payment():
+    # Check if order data exists in session
+    if 'order_data' not in session:
+        flash('No order data found. Please create an order first.', 'warning')
+        return redirect(url_for('main.dashboard'))
+    
+    order_data = session['order_data']
+    form = PaymentForm()
+    
+    if form.validate_on_submit():
+        # Test card validation - only check if card number is the test card
+        card_number = form.card_number.data.replace(' ', '')  # Remove spaces
+        
+        if card_number == '4111111111111111':
+            # Test card - payment successful
+            # Create the order
+            order = Order(
+                user_id=order_data['user_id'],
+                upload_id=order_data['upload_id'],
+                size=order_data['size'],
+                quantity=order_data['quantity'],
+                price=order_data['price'],
+                total_price=order_data['total_price'],
+                address=order_data['address'],
+                phone_number=order_data['phone_number'],
+                time_slot_id=order_data['time_slot_id'],
+                status='pending'
+            )
+            db.session.add(order)
+            db.session.commit()
+            
+            # Clear order data from session
+            session.pop('order_data', None)
+            
+            flash('Payment successful! Your postcard order has been placed.', 'success')
+            return redirect(url_for('orders.my_orders'))
+        else:
+            # Invalid card number
+            flash('Payment failed. Please check your card details.', 'danger')
+    
+    return render_template('orders/payment.html', form=form, order_data=order_data)
+
 
 @orders.route('/my-orders')
 @jwt_required

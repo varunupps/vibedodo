@@ -1,0 +1,171 @@
+{% extends "layout.html" %}
+
+{% block title %}Payment{% endblock %}
+
+{% block content %}
+<style>
+    .payment-container {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    
+    .order-summary {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .card-form {
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 30px;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-control {
+        border-radius: 6px;
+        border: 1px solid #ced4da;
+        padding: 12px;
+    }
+    
+    .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .btn-pay {
+        background-color: #28a745;
+        border-color: #28a745;
+        padding: 12px 30px;
+        font-size: 16px;
+        font-weight: 500;
+    }
+    
+    .btn-pay:hover {
+        background-color: #218838;
+        border-color: #1e7e34;
+    }
+    
+    .test-card-info {
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .expiry-row {
+        display: flex;
+        gap: 15px;
+    }
+    
+    .expiry-col {
+        flex: 1;
+    }
+</style>
+
+<div class="payment-container">
+    <h2 class="mb-4">Complete Your Payment</h2>
+    
+    <!-- Order Summary -->
+    <div class="order-summary">
+        <h4>Order Summary</h4>
+        <div class="row">
+            <div class="col-md-6">
+                <strong>Size:</strong> {{ order_data.size.title() }}<br>
+                <strong>Quantity:</strong> {{ order_data.quantity }}<br>
+                <strong>Unit Price:</strong> ${{ "%.2f"|format(order_data.price) }}
+            </div>
+            <div class="col-md-6">
+                <strong>Total:</strong> ${{ "%.2f"|format(order_data.total_price) }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Test Card Info -->
+    <div class="test-card-info">
+        <strong>Test Mode:</strong> Use card number <code>4111111111111111</code> for testing. Any other card number will fail.
+    </div>
+    
+    <!-- Payment Form -->
+    <div class="card-form">
+        <form method="POST">
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+                {{ form.card_number.label(class="form-label") }}
+                {{ form.card_number(class="form-control", placeholder="1234 5678 9012 3456", maxlength="19") }}
+                {% if form.card_number.errors %}
+                    <div class="text-danger">
+                        {% for error in form.card_number.errors %}
+                            <small>{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="expiry-row">
+                <div class="expiry-col">
+                    {{ form.expiry_month.label(class="form-label") }}
+                    {{ form.expiry_month(class="form-control") }}
+                    {% if form.expiry_month.errors %}
+                        <div class="text-danger">
+                            {% for error in form.expiry_month.errors %}
+                                <small>{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="expiry-col">
+                    {{ form.expiry_year.label(class="form-label") }}
+                    {{ form.expiry_year(class="form-control") }}
+                    {% if form.expiry_year.errors %}
+                        <div class="text-danger">
+                            {% for error in form.expiry_year.errors %}
+                                <small>{{ error }}</small>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-group">
+                {{ form.cvv.label(class="form-label") }}
+                {{ form.cvv(class="form-control", placeholder="123", maxlength="4") }}
+                {% if form.cvv.errors %}
+                    <div class="text-danger">
+                        {% for error in form.cvv.errors %}
+                            <small>{{ error }}</small>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group mt-4">
+                {{ form.submit(class="btn btn-pay btn-primary") }}
+                <a href="{{ url_for('main.dashboard') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Auto-format card number input
+    document.querySelector('input[name="card_number"]').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+        // Limit to 16 digits
+        value = value.substring(0, 16);
+        let formattedValue = value.match(/.{1,4}/g)?.join(' ') || value;
+        if (formattedValue !== e.target.value) {
+            e.target.value = formattedValue;
+        }
+    });
+</script>
+{% endblock %}
